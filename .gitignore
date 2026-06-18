@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+
+# Model weights (auto-downloaded on first run)
+*.pt
+*.task
+
+# Pipeline data & outputs (large; regenerate locally)
+data/
+results/
+*_overlay.mp4
+*_pose.mp4
+*_hands.mp4
+*_keypoints.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Note: app/KakaoTalk_20260606_171834495.mp4 is intentionally tracked
+# (the work-instruction app needs it to play).

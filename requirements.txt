@@ -1,0 +1,10 @@
+# Pose-estimation pipeline dependencies (Python 3.11-3.13).
+# For GPU (CUDA) torch, install torch/torchvision first from the CUDA index, e.g.:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+# then: pip install -r requirements.txt
+ultralytics>=8.4
+mediapipe>=0.10.18
+torch
+torchvision
+opencv-python>=4.9
+numpy
