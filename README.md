@@ -20,8 +20,9 @@ checkvalve_app/
 ├── app/                                  # 웹 작업지도서 (배포용)
 │   ├── 체크밸브_작업지도서.exe            # 더블클릭 실행 (PyInstaller 빌드)
 │   ├── check_valve.html                  # UI 본체 (영상 재생·단계 동기화·체크리스트)
-│   ├── launcher.py                        # exe 의 원본 소스 (html 을 브라우저로 오픈)
-│   ├── KakaoTalk_20260606_171834495.mp4  # 작업 영상 (앱이 재생)
+│   ├── launcher.command                  # macOS 실행 파일 (더블클릭)
+│   ├── launcher.py                        # 런처 원본 소스 (html 을 브라우저로 오픈)
+│   ├── KakaoTalk_20260606_171834495.mp4  # 작업 영상 H.264/mp4 (앱이 재생)
 │   └── 사용법.txt
 └── pose/                                 # 키포인트 추출 + 검증 파이프라인
     ├── extract_pose.py    # YOLO11-pose 전신 17점 (GPU 가속)
@@ -35,13 +36,17 @@ checkvalve_app/
 
 ## 1. 작업지도서 앱 실행 (`app/`)
 
-가장 간단한 방법:
+가장 간단한 방법 (더블클릭):
 
-1. `app/` 폴더의 **`체크밸브_작업지도서.exe`** 더블클릭
-2. 기본 브라우저에 작업지도서 UI가 뜹니다 (영상 재생 · 단계 자동 하이라이트 · 검사 체크리스트 · 인쇄)
+- **Windows** → `app/체크밸브_작업지도서.exe`
+- **macOS** → `app/launcher.command` (최초 1회만 우클릭 → "열기")
+- **어느 OS든** → `app/check_valve.html` 을 브라우저로 직접 열어도 됩니다
 
-> ⚠️ `체크밸브_작업지도서.exe`, `check_valve.html`, `KakaoTalk_...mp4` 세 파일은 **같은 폴더**에
-> 함께 있어야 합니다. 파이썬 설치 없이 폴더째 USB·다른 PC 로 옮겨도 동작합니다.
+기본 브라우저에 작업지도서 UI가 뜹니다 (영상 재생 · 단계 자동 하이라이트 · 검사 체크리스트 · 인쇄).
+
+> ⚠️ 실행 파일·`check_valve.html`·`KakaoTalk_...mp4` 는 **같은 폴더**에 함께 있어야 합니다.
+> 파이썬 설치 없이 폴더째 USB·다른 PC 로 옮겨도 동작합니다.
+> 영상은 **H.264/mp4(faststart)** 라 모든 최신 브라우저·OS 에서 재생됩니다.
 
 파이썬으로 직접 실행하거나 exe 를 다시 빌드하려면:
 

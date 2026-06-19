@@ -1,0 +1,10 @@
+# Shell scripts must stay LF so the macOS launcher's shebang works
+*.command text eol=lf
+*.sh      text eol=lf
+launcher.py text eol=lf
+
+# Treat media/binaries as binary (no EOL or diff munging)
+*.mp4 binary
+*.exe binary
+*.pt  binary
+*.task binary

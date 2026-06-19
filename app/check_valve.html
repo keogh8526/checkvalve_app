@@ -74,6 +74,17 @@
   .vidwrap{position:relative;border:1px solid var(--bd2);background:#0b1220;
     aspect-ratio:16/9;overflow:hidden}
   .vidwrap video{width:100%;height:100%;display:block;background:#0b1220}
+  /* 영상 로드 실패 시 안내 오버레이 */
+  .vidwrap .verr{position:absolute;inset:0;display:none;flex-direction:column;
+    align-items:center;justify-content:center;gap:7px;text-align:center;
+    background:#0b1220;color:#e7ecf2;font-size:12.5px;padding:16px;line-height:1.55}
+  .vidwrap .verr.show{display:flex}
+  .vidwrap .verr b{color:#ff8a8a;font-size:13.5px}
+  /* aspect-ratio 미지원(구형 Safari) 폴백: padding-bottom 16:9 */
+  @supports not (aspect-ratio: 16 / 9){
+    .vidwrap{height:0;padding-bottom:56.25%}
+    .vidwrap video, .vidwrap .verr{position:absolute;inset:0}
+  }
   .vtag{position:absolute;top:7px;left:7px;background:rgba(255,255,255,.94);color:var(--navy);
     font-weight:800;font-size:12px;padding:3px 8px;border:1px solid var(--bd)}
   .vlive{position:absolute;top:7px;right:7px;background:rgba(15,23,42,.6);color:#fff;
@@ -277,6 +288,10 @@
         <div class="vidwrap">
           <video id="vid" controls playsinline preload="metadata" src="KakaoTalk_20260606_171834495.mp4"></video>
           <div class="vtag" id="vtag">1-1</div>
+          <div class="verr" id="verr">
+            <b>영상을 재생할 수 없습니다</b>
+            <span>브라우저가 영상 코덱을 지원하지 않거나<br>mp4 파일이 같은 폴더에 없습니다.<br>최신 Chrome·Edge 또는 Safari로 열어 주세요.</span>
+          </div>
         </div>
         <div class="cap" id="cap"></div>
         <div class="chips" id="chips"></div>
@@ -340,11 +355,20 @@
   vid.addEventListener("ended",()=>{rowEls.forEach(el=>{el.classList.add("done");el.classList.remove("active")});cur=-1;});
   vid.addEventListener("play",()=>$("#btnPlay").textContent="❚❚ 정지");
   vid.addEventListener("pause",()=>$("#btnPlay").textContent="▶ 재생");
+  // 영상 로드 실패(코덱 미지원·파일 없음) 시 안내, 성공 시 숨김
+  vid.addEventListener("error",()=>$("#verr").classList.add("show"));
+  vid.addEventListener("loadeddata",()=>$("#verr").classList.remove("show"));
 
   $("#btnPlay").onclick=()=>vid.paused?vid.play():vid.pause();
   $("#btnRestart").onclick=()=>{vid.currentTime=0;rowEls.forEach(e=>e.classList.remove("done"));vid.play();};
   $("#btnPrint").onclick=()=>window.print();
-  $("#btnFull").onclick=()=>document.fullscreenElement?document.exitFullscreen():$("#page").requestFullscreen();
+  // 전체화면 — 표준 API 우선, 구형 Safari는 webkit 접두사로 폴백
+  $("#btnFull").onclick=()=>{
+    const page=$("#page");
+    const fsEl=document.fullscreenElement||document.webkitFullscreenElement;
+    if(fsEl){ (document.exitFullscreen||document.webkitExitFullscreen).call(document); }
+    else { (page.requestFullscreen||page.webkitRequestFullscreen).call(page); }
+  };
   document.addEventListener("keydown",e=>{
     if(e.code==="Space"&&!/INPUT|BUTTON/.test(e.target.tagName)){e.preventDefault();vid.paused?vid.play():vid.pause();}
   });
