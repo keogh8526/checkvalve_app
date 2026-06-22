@@ -52,8 +52,12 @@ def main():
     out_json = Path(args.out_json) if args.out_json else video_path.with_name(video_path.stem + "_keypoints.json")
     out_video = Path(args.out_video) if args.out_video else video_path.with_name(video_path.stem + "_pose.mp4")
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    gpu_name = torch.cuda.get_device_name(0) if device == "cuda" else "CPU"
+    if torch.cuda.is_available():
+        device, gpu_name = "cuda", torch.cuda.get_device_name(0)
+    elif getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+        device, gpu_name = "mps", "Apple MPS"
+    else:
+        device, gpu_name = "cpu", "CPU"
     print(f"[info] device   : {device} ({gpu_name})")
     print(f"[info] model    : {args.model}")
 

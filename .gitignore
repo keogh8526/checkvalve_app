@@ -25,3 +25,12 @@ Thumbs.db
 
 # Note: app/KakaoTalk_20260606_171834495.mp4 is intentionally tracked
 # (the work-instruction app needs it to play).
+
+# 개인 기록·보고 자료 / 회사 문서 (공유 제외 — 다른 사람이 못 보게)
+PIPELINE.md
+make_ppt.py
+*.pptx
+*.pdf
+*.png
+.claude/
+.omc/
