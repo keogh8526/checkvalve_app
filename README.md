@@ -111,8 +111,31 @@ python pose/run_pipeline.py --data-dir ./videos --out-dir ./results
 
 - YOLO 가중치(`yolo11x-pose.pt`)와 MediaPipe 모델(`holistic_landmarker.task`)은 **첫 실행 시
   자동 다운로드**되며 `.gitignore` 로 제외됩니다.
-- `data/`, `results/`, 오버레이 영상 등 대용량 산출물도 저장소에 포함하지 않습니다(로컬 생성).
+- **원본 공정 영상과 키포인트 데이터(`data/`, `results/`)는 용량(수백 MB~)이 커서 git에 포함하지
+  않습니다.** GitHub 파일 용량 제한(100MB) 때문이며, 영상·데이터는 **별도(클라우드/로컬)로 보관**합니다.
+  레포에는 코드만 있으므로, 실행하려면 영상을 `data/` 에 직접 넣어야 합니다.
 - 작업지도서가 재생하는 `app/KakaoTalk_...mp4`(약 72MB)만 앱 동작을 위해 포함되어 있습니다.
+
+---
+
+## 작업지도서 자동화 파이프라인 (`pose/` 신규 모듈)
+
+영상 → 키포인트 → 단계 분할 → 작업지도서로 잇는 자동화 모듈. `pipeline.py` 가 아래를 순서대로 묶는다.
+
+| 모듈 | 역할 |
+|------|------|
+| `extract_pose.py` | YOLO11-pose 전신 키포인트 (Apple MPS 가속 지원) |
+| `extract_hands_rtm.py` | rtmlib RTMPose-Hand 손 21점 (MediaPipe의 Python 3.13 대체) |
+| `segment.py` | 손목속도(One-Euro 평활) → `ruptures` 변화점으로 작업 단계 자동 분할 |
+| `align_dtw.py` | DTW로 서로 다른 각도·회차 영상을 공통 타임라인에 정렬 |
+| `extract_asr.py` | faster-whisper(large-v3) 한국어 나레이션 전사 + 도메인 어휘 주입 |
+| `anchor_steps.py` | 나레이션을 공정관리지침서 표준 단계에 매핑 + 용어 표준화 |
+| `build_steps.py` / `refine_steps.py` | 구간 × 나레이션 × 공정단계 융합, 부가/비부가(VA/NVA) 동작 구별 |
+| `generate_html.py` | 단계 결과(`steps.json`)를 작업지도서 HTML로 렌더 |
+| `pipeline.py` | 위 단계를 한 명령으로 연결하는 오케스트레이터 |
+
+> 설계 원칙: **수치(시간·구간)는 측정값, 단계명·순서는 공정관리지침서, 설명은 나레이션** 에서 가져오고
+> LLM은 문장만 다듬어 환각을 막는다. 출력은 자동 초안이며 **사람 검수 후 확정(반자동)** 한다.
 
 ## 사용 모델
 
