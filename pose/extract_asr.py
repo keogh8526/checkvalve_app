@@ -20,7 +20,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--audio", required=True)
     ap.add_argument("--out-json", required=True)
-    ap.add_argument("--model", default="small", help="tiny/base/small/medium/large-v3")
+    ap.add_argument("--model", default="large-v3",
+                    help="확정=large-v3 (small은 한국어 도메인 전사 불가). tiny/base/small/medium/large-v3")
     ap.add_argument("--lang", default="ko")
     ap.add_argument("--prompt", default=None,
                     help="도메인 어휘 주입(initial_prompt) — 전문용어 인식률↑")
@@ -34,9 +35,11 @@ def main():
 
     print(f"[info] model={args.model} lang={args.lang} (CPU int8) | 도메인프롬프트 ON")
     model = WhisperModel(args.model, device="cpu", compute_type="int8")
+    # 재현성 고정(M9): temperature=0 + beam 고정 → 재실행 시 동일 전사. (기본은 temperature fallback이라 비결정적)
     segments, info = model.transcribe(
         args.audio, language=args.lang, word_timestamps=True, vad_filter=True,
-        initial_prompt=prompt,
+        initial_prompt=prompt, temperature=0.0, beam_size=5,
+        condition_on_previous_text=False,
     )
 
     out = []

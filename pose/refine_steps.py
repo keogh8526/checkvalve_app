@@ -24,7 +24,7 @@ from pathlib import Path
 
 import numpy as np
 
-from segment import smooth, wrist_xy
+from segment import smooth, wrist_xy, primary_person
 
 
 def speed_series(body_json):
@@ -32,8 +32,9 @@ def speed_series(body_json):
     fps = d["fps"]; stride = d.get("stride", 1); eff = fps / stride
     sw = []
     for fr in d["frames"]:
-        if fr["num_persons"] > 0:
-            k = fr["persons"][0]["keypoints"]; ls, rs = k["left_shoulder"], k["right_shoulder"]
+        p = primary_person(fr)
+        if p is not None:
+            k = p["keypoints"]; ls, rs = k["left_shoulder"], k["right_shoulder"]
             if ls["conf"] > 0.3 and rs["conf"] > 0.3:
                 sw.append(math.hypot(ls["x"] - rs["x"], ls["y"] - rs["y"]))
     scale = float(np.median(sw)) if sw else 1.0
@@ -43,6 +44,9 @@ def speed_series(body_json):
         xs = smooth(x / scale, eff); ys = smooth(y / scale, eff)
         vs.append(np.sqrt(np.diff(xs) ** 2 + np.diff(ys) ** 2) * eff)
     sp = smooth(np.mean(vs, axis=0), eff, 0.5, 0.01)
+    # NaN 가드(M7): 전 구간 결측이면 중앙값이 NaN → 모든 단계 활동량 NaN으로 조용히 오분류됨. segment.py와 동일하게 차단.
+    if np.all(np.isnan(sp)):
+        raise SystemExit("[err] 손목 신호 전부 결측 — 검출 실패 영상 (refine 불가)")
     sp = np.nan_to_num(sp, nan=float(np.nanmedian(sp)))
     t = np.arange(len(sp)) * stride / fps     # 절대시각(초)
     return t, sp
@@ -53,11 +57,14 @@ def mean_speed(t, sp, t0, t1):
     return float(np.mean(sp[m])) if m.any() else 0.0
 
 
-def snap(t, sp, t_target, win=3.0):
-    """t_target 근처 ±win에서 속도 최저점(정지)으로 경계 스냅."""
+def snap(t, sp, t_target, win=3.0, after=None):
+    """t_target 근처 ±win에서 속도 최저점(정지)으로 경계 스냅.
+    after 지정 시 그 시각 이후 구간에서만 탐색(M8: 경계 역전·음수구간 방지)."""
     m = (t >= t_target - win) & (t <= t_target + win)
+    if after is not None:
+        m &= (t > after)
     if not m.any():
-        return round(t_target, 1)
+        return round(max(t_target, after) if after is not None else t_target, 1)
     idx = np.where(m)[0]
     return round(float(t[idx[np.argmin(sp[idx])]]), 1)
 
@@ -78,7 +85,7 @@ def main():
     for a in anchors:
         t0, t1 = a["t_start"], a["t_end"]
         v = mean_speed(t, sp, t0, t1)
-        s0 = snap(t, sp, t0); s1 = snap(t, sp, t1)
+        s0 = snap(t, sp, t0); s1 = snap(t, sp, t1, after=s0)   # s1은 s0 이후에서만 → 음수구간 방지(M8)
         # 분류
         if v < active_th * 0.6:
             cls = "설명/대기(저활동)"      # 앵커 있으나 손 거의 안 움직임 = 작업 아님

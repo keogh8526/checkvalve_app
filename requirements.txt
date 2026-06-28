@@ -13,8 +13,8 @@ ruptures>=1.1            # 단계 자동분할 (changepoint)
 faster-whisper>=1.0      # 한국어 나레이션 ASR (large-v3)
 matplotlib>=3.7          # 신호/정렬 시각화
 
-# 손 키포인트:
-#  - mediapipe는 Python 3.13 미지원(휠 없음) -> 3.11 환경이면 아래 사용
-# mediapipe>=0.10.18
-#  - Python 3.13에서는 rtmlib(RTMPose-Hand, ONNX) 사용 권장
-# rtmlib
+# 손 키포인트 (closeup 영상, 선택):
+#  - Python 3.13: rtmlib(RTMPose-Hand, ONNX) 사용 (mediapipe는 3.13 휠 없음)
+rtmlib>=0.0.13           # RTMPose-Hand 21점
+onnxruntime>=1.17        # rtmlib 추론 백엔드 (mac: CoreML/CPU)
+#  - Python 3.11 환경이면 mediapipe도 가능: pip install mediapipe>=0.10.18

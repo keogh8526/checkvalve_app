@@ -18,7 +18,7 @@ from pathlib import Path
 
 import numpy as np
 
-from segment import smooth, wrist_xy   # 모듈 재사용 (One-Euro 평활, 손목좌표)
+from segment import smooth, wrist_xy, primary_person   # 모듈 재사용 (One-Euro 평활, 손목좌표, 작업자선택)
 
 
 def speed_profile(body_json, N=400):
@@ -27,8 +27,9 @@ def speed_profile(body_json, N=400):
     import math
     sw = []
     for fr in d["frames"]:
-        if fr["num_persons"] > 0:
-            k = fr["persons"][0]["keypoints"]
+        p = primary_person(fr)
+        if p is not None:
+            k = p["keypoints"]
             ls, rs = k["left_shoulder"], k["right_shoulder"]
             if ls["conf"] > 0.3 and rs["conf"] > 0.3:
                 sw.append(math.hypot(ls["x"] - rs["x"], ls["y"] - rs["y"]))

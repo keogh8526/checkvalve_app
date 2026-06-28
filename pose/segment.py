@@ -48,12 +48,26 @@ def smooth(arr, freq, mincutoff=1.0, beta=0.02):
     return np.array([f(v) for v in arr])
 
 
+def primary_person(fr):
+    """작업자 선택 = 박스 면적 최대 인물(L-a). 다인 프레임에서 persons[0] 오선택 방지.
+    box 없으면 검출순서 0번 폴백."""
+    if fr.get("num_persons", 0) <= 0:
+        return None
+    ps = fr["persons"]
+
+    def area(p):
+        b = p.get("box")
+        return (b[2] - b[0]) * (b[3] - b[1]) if b else 0.0
+    return max(ps, key=area)
+
+
 def wrist_xy(data, name, conf_min=0.3):
-    """손목 좌표 시계열. 저신뢰/미검출은 NaN -> 선형보간."""
+    """손목 좌표 시계열(작업자=최대박스). 저신뢰/미검출은 NaN -> 선형보간."""
     xs, ys = [], []
     for fr in data["frames"]:
-        if fr["num_persons"] > 0:
-            kp = fr["persons"][0]["keypoints"][name]
+        p = primary_person(fr)
+        if p is not None:
+            kp = p["keypoints"][name]
             if kp["conf"] >= conf_min:
                 xs.append(kp["x"]); ys.append(kp["y"]); continue
         xs.append(np.nan); ys.append(np.nan)
@@ -73,24 +87,36 @@ def main():
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--pen", type=float, default=8.0, help="ruptures penalty (클수록 경계 적음)")
     ap.add_argument("--min-sec", type=float, default=2.0, help="최소 단계 길이(초)")
+    ap.add_argument("--n-steps", type=int, default=0,
+                    help="공정서 단계 수 K. 지정시 '정확히 K세그' 강제(Dynp). 0=기존 Pelt(pen)")
     args = ap.parse_args()
 
     out = Path(args.out_dir); out.mkdir(parents=True, exist_ok=True)
     data = json.loads(Path(args.body_json).read_text(encoding="utf-8"))
     fps = data["fps"]; stride = data.get("stride", 1)
     eff_fps = fps / stride                      # 처리된 프레임의 실효 fps
-    scale_px = 1.0
 
-    # 어깨너비로 정규화(카메라 거리 무관) — 가능할 때
-    sw = []
-    for fr in data["frames"]:
-        if fr["num_persons"] > 0:
-            k = fr["persons"][0]["keypoints"]
-            ls, rs = k["left_shoulder"], k["right_shoulder"]
-            if ls["conf"] > 0.3 and rs["conf"] > 0.3:
-                sw.append(math.hypot(ls["x"] - rs["x"], ls["y"] - rs["y"]))
+    # 정규화 스케일: 어깨너비 → (실패시)엉덩이너비 → (실패시)프레임폭 폴백.
+    # (손확대 영상은 어깨 conf=0이라 scale_px=1.0로 남아 속도 폭주·분할 실패했음 — 버그 수정)
+    def width_series(a, b):
+        out = []
+        for fr in data["frames"]:
+            p = primary_person(fr)
+            if p is not None:
+                k = p["keypoints"]
+                ka, kb = k[a], k[b]
+                if ka["conf"] > 0.3 and kb["conf"] > 0.3:
+                    out.append(math.hypot(ka["x"] - kb["x"], ka["y"] - kb["y"]))
+        return out
+    sw = width_series("left_shoulder", "right_shoulder")
+    scale_src = "shoulder"
+    if not sw:
+        sw = width_series("left_hip", "right_hip"); scale_src = "hip"
     if sw:
         scale_px = float(np.median(sw))
+    else:
+        scale_px = float(data.get("resolution", [1920])[0]) * 0.2   # 프레임폭 20% 폴백
+        scale_src = "frame"
 
     # 양손목 속도 (정규화 -> One-Euro -> 속도) 합성
     speeds = []
@@ -109,8 +135,14 @@ def main():
 
     # ruptures 변화점 검출
     min_size = max(2, int(args.min_sec * eff_fps))
-    algo = rpt.Pelt(model="rbf", min_size=min_size).fit(speed.reshape(-1, 1))
-    bkps = algo.predict(pen=args.pen)            # 끝 인덱스 목록(마지막=N)
+    if args.n_steps and args.n_steps > 1:
+        # 공정서 단계 수(K) 사전지식으로 '정확히 K세그' 강제 (Dynp, n_bkps=K-1).
+        # → 과/미분할(개수) 문제 직접 제거. 단 경계 '위치'는 여전히 속도 의존.
+        algo = rpt.Dynp(model="rbf", min_size=min_size, jump=1).fit(speed.reshape(-1, 1))
+        bkps = algo.predict(n_bkps=args.n_steps - 1)
+    else:
+        algo = rpt.Pelt(model="rbf", min_size=min_size).fit(speed.reshape(-1, 1))
+        bkps = algo.predict(pen=args.pen)        # 끝 인덱스 목록(마지막=N)
 
     # 경계 -> 세그먼트 시각
     bounds = [0] + bkps

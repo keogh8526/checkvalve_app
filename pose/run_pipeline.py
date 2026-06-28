@@ -1,4 +1,8 @@
 """
+[LEGACY · 본선 아님] QC 검증 전용 드라이버. 작업지도서 본선은 pose/pipeline.py 를 쓴다.
+이 스크립트는 extract_hands.py(MediaPipe, Python 3.13 미지원)를 호출하므로 3.13 환경에서는
+손 추출 단계가 실패한다. 손 키포인트가 필요하면 extract_hands_rtm.py(rtmlib)를 별도 사용.
+
 Portable driver: run the full keypoint pipeline on every .mp4 in a folder.
 
 For each video it runs, in order:
@@ -31,7 +35,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data-dir", required=True, help="Folder containing input .mp4 videos.")
     ap.add_argument("--out-dir", required=True, help="Output root; one subfolder is created per video.")
-    ap.add_argument("--model", default="yolo11x-pose.pt", help="Ultralytics pose model (auto-downloaded).")
+    ap.add_argument("--model", default="yolo11m-pose.pt",
+                   help="확정=yolo11m(본선 pipeline.py와 동일). 이전 기본 yolo11x는 레포 미포함.")
     ap.add_argument("--no-render", action="store_true", help="Skip the annotated overlay video.")
     args = ap.parse_args()
 

@@ -34,3 +34,4 @@ make_ppt.py
 *.png
 .claude/
 .omc/
+scratch_adv/
