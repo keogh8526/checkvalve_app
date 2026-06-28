@@ -150,7 +150,31 @@ def main():
         "--out-dir", out / "thumbs", "--write")
     html = out / "work_instruction.html"
     run("generate_html.py", "--steps", steps, "--out", html)
-    print(f"\n[RUN_ALL DONE] 다시점 표준 작업지도서 -> {html}")
+
+    # ── [F] 팀 양식 작업지도서(app/check_valve.html 템플릿)에 파이프라인 데이터 주입 ──
+    #     + 포즈 스켈레톤 오버레이 영상(분석 시각화)을 좌측 영상으로 표시.
+    import shutil
+    ffmpeg = shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
+    app = ROOT / "app"
+    ref_body = out / (list(VIEWS)[0] + "_fast") / "body.json"
+    skel_final = app / "front_skeleton.mp4"
+    if Path(ffmpeg).exists() and ref_body.exists():
+        skel_raw = out / "front_skeleton_raw.mp4"
+        run("render_overlay.py", "--video", ref_fast_video,
+            "--body-json", ref_body, "--out", skel_raw)
+        subprocess.run([ffmpeg, "-y", "-i", str(skel_raw), "-vf", "scale=640:-2",
+                        "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                        "-movflags", "+faststart", "-an", str(skel_final)], check=True)
+        skel_raw.unlink(missing_ok=True)
+        vid_name = "front_skeleton.mp4"
+    else:
+        print(">>> [F] ffmpeg/ body.json 없음 → 스켈레톤 생략, 원본 영상 사용")
+        vid_name = "front_fast.mp4"
+    team_html = app / "work_instruction_auto.html"
+    run("render_workinstruction.py", "--steps", steps,
+        "--template", app / "check_valve.html", "--video", vid_name, "--out", team_html)
+
+    print(f"\n[RUN_ALL DONE] 기본양식 -> {html}\n               팀 양식(자동) -> {team_html}")
 
 
 if __name__ == "__main__":
