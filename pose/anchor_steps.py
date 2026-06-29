@@ -41,8 +41,8 @@ def main():
     spans = []
     for t in tagged:
         if t["step"] == UNCLASSIFIED:
-            if spans:                                  # 직전 span에 흡수(설명 연속성)
-                spans[-1]["end"] = t["end"]; spans[-1]["narration"] += " " + t["text"]
+            if spans:                                  # 설명 텍스트만 흡수 — 시각 경계는 유지.
+                spans[-1]["narration"] += " " + t["text"]   # (end 연장 시 단계 경계 넘어 타이밍 오염)
             continue
         if spans and spans[-1]["step"] == t["step"]:
             spans[-1]["end"] = t["end"]; spans[-1]["narration"] += " " + t["text"]

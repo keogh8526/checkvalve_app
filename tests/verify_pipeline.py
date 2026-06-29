@@ -10,13 +10,17 @@
 usage: python tests/verify_pipeline.py
 """
 import json
+import os
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-RUN_FULL = ROOT / "results/run_front_full"     # 설명영상 풀체인(의미 소스)
-FAST = {"front": ROOT / "results/fast_front", "top60": ROOT / "results/fast_top60"}
-FUSED = ROOT / "results/fused/fused_segments.json"
+# run_all.py 산출 레이아웃(results/all/<view>_fast, results/all/fused_segments.json)에 맞춤.
+# 다른 위치를 검증하려면 VERIFY_OUT / VERIFY_RUN_FULL 환경변수로 재정의.
+_OUT = ROOT / os.environ.get("VERIFY_OUT", "results/all")
+RUN_FULL = ROOT / os.environ.get("VERIFY_RUN_FULL", "results/run_front_full")  # 설명영상 단일 풀체인
+FAST = {"front": _OUT / "front_fast", "top60": _OUT / "top60_fast"}
+FUSED = _OUT / "fused_segments.json"
 
 P = F = U = 0          # pass / fail / unmeasured
 LOG = []
@@ -155,11 +159,11 @@ def main():
 
     # ── Tier 2 신뢰도(정답셋 없으면 측정불가) ─────────────────────
     LOG.append("\n■ Tier 2 신뢰도/정확도 (정직한 한계)")
-    gt = ROOT / "data/ground_truth.json"
+    gt = ROOT / "data/ground_truth.csv"          # eval_honest·test_label_ceiling 와 동일 포맷(csv)
     if gt.exists():
-        unmeasured("경계오차/분류정확도", "정답셋 발견 — 별도 평가 스크립트 필요(미구현)")
+        unmeasured("경계오차/분류정확도", "정답셋 발견 — eval_honest.py / test_label_ceiling.py 로 측정")
     else:
-        unmeasured("단계경계 오차(초)", "정답셋(data/ground_truth.json) 없음 → 정확도 수치화 불가")
+        unmeasured("단계경계 오차(초)", "정답셋(data/ground_truth.csv) 없음 → 정확도 수치화 불가")
         unmeasured("단계 분류 정확도", "정답셋 없음 → 키워드 분류 정/오 판별 불가")
         unmeasured("표준시간 신뢰도", "단일 작업자·단일 회차 → 통계(중앙값±범위) 불가, '참고시간'")
 
