@@ -28,16 +28,23 @@ def bounds_of(items, ks="t_start", ke="t_end"):
     b = set()
     for s in items:
         b.add(round(float(s[ks]), 1)); b.add(round(float(s[ke]), 1))
-    return sorted(b)
+    sb = sorted(b)
+    # 전역 시작(≈0)·끝(≈T) 경계는 GT·예측이 항상 공유하는 자명매칭 → 제외(P/R 부풀림 방지)
+    return sb[1:-1] if len(sb) >= 2 else []
 
 
 def hungarian_match(gt, pred, tol):
-    """정답·예측 경계를 1:1 최적매칭(scipy). tol 이내만 매칭 인정."""
+    """경계를 1:1 매칭하되 'tol 이내 매칭 개수를 최대화'한다.
+    주의: 최소비용할당(linear_sum_assignment(거리))은 전체비용 최소화라, tol 밖의
+    가까운 쌍에 매칭을 낭비해 유효매칭을 과소계산할 수 있다 → tol내=보상(-1) 행렬로
+    최대 카디널리티 매칭을 구한다."""
     if not gt or not pred:
         return 0
-    C = np.abs(np.array(gt)[:, None] - np.array(pred)[None, :])   # 비용=거리
-    ri, ci = linear_sum_assignment(C)
-    return sum(1 for r, c in zip(ri, ci) if C[r, c] <= tol)       # tol내 매칭만
+    D = np.abs(np.array(gt)[:, None] - np.array(pred)[None, :])
+    within = D <= tol
+    cost = np.where(within, -1.0, 0.0)        # tol내 매칭 1개당 -1 → 합 최소화=매칭수 최대화
+    ri, ci = linear_sum_assignment(cost)
+    return int(sum(1 for r, c in zip(ri, ci) if within[r, c]))
 
 
 def prf(matched, n_gt, n_pred):

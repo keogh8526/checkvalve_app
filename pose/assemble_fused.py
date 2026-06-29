@@ -68,20 +68,23 @@ def label_by_rule(sectors):
     n = len(sectors)
     durs = [s["t_end"] - s["t_start"] for s in sectors]
     labels = [None] * n
+    fill = ["정렬(SPRING·SPACER)", "GUIDE 결합", "BODY-GUIDE 결합", "검사/측정"]
     if n == 0:
         return labels
-    longest = max(range(n), key=lambda i: durs[i])      # 최장 = HINGE PIN(핀삽입)
-    labels[0] = "부품 준비"                               # 첫 섹터 = 준비
+    if n < 3:
+        # 섹터가 너무 적으면 준비/핀/세트스크류 특수규칙이 서로 덮어써 충돌 → 공정서 순서로 단순 채움
+        base = ["부품 준비"] + fill
+        return [base[min(len(base) - 1, i)] for i in range(n)]
+    labels[0] = "부품 준비"                                  # 첫 섹터 = 준비
+    # HINGE PIN = 준비(0) 제외한 최장 (longest==0이 '부품 준비'를 덮어쓰지 않도록)
+    longest = max(range(1, n), key=lambda i: durs[i])
     labels[longest] = "HINGE PIN 조립"
-    # 종단부(후반 50%) 중 가장 긴 섹터 = SET SCREW 체결
-    half = n // 2
-    tail = range(max(half, longest + 1), n)
+    # SET SCREW = HINGE PIN 이후 미배정 중 최장(없으면 미배정 전체 중 최장) — HINGE PIN 덮어쓰기 방지
+    tail = [i for i in range(longest + 1, n) if labels[i] is None] \
+        or [i for i in range(n) if labels[i] is None]
     if tail:
-        sc = max(tail, key=lambda i: durs[i]); labels[sc] = "SET SCREW 결합"
-    else:
-        labels[n - 1] = "SET SCREW 결합"
-    # 나머지를 공정서 순서(정렬→GUIDE→BODY-GUIDE→검사)로 시간순 채움
-    fill = ["정렬(SPRING·SPACER)", "GUIDE 결합", "BODY-GUIDE 결합", "검사/측정"]
+        labels[max(tail, key=lambda i: durs[i])] = "SET SCREW 결합"
+    # 나머지를 공정서 순서(정렬→GUIDE→BODY-GUIDE→검사)로 채움
     fi = 0
     for i in range(n):
         if labels[i] is None:

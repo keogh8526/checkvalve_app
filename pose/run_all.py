@@ -65,7 +65,8 @@ def ensure_pose(video, body, model="yolo11m-pose.pt"):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="results/all")
-    ap.add_argument("--pen", default="12")
+    ap.add_argument("--pen", default="0",
+                    help="0이면 Dynp(공정서 K=n_steps 강제, 기존 기본동작) / >0이면 Pelt(pen)")
     ap.add_argument("--min-sec", default="3")
     ap.add_argument("--n-steps", default="6", help="공정서 작업단계 수(빠른영상 K). 다채널 분할에 사용")
     ap.add_argument("--channels", default="spd,posx,posy",
@@ -81,7 +82,7 @@ def main():
             continue
         d = out / f"{name}_fast"; d.mkdir(parents=True, exist_ok=True)
         if v.get("hand"):
-            # 손확대: rtmlib 손21점 → segment_hands (body pose 불가, 검증 75%)
+            # 손확대: rtmlib 손21점 → segment_hands (body pose 불가 — 어깨 conf 0 대체 트랙)
             hands = d / "hands.json"
             if not hands.exists() or hands.stat().st_size == 0:
                 run("extract_hands_rtm.py", "--video", ROOT / v["fast"], "--out-json", hands, "--stride", "3")
@@ -91,8 +92,8 @@ def main():
         else:
             body = d / "body.json"
             ensure_pose(ROOT / v["fast"], body)
-            # 다채널(손위치 포함) 분할 — 속도단독 대비 정확도 2배 검증(50→83%). 공정서 K=6 강제.
-            run("segment_multi.py", "--body-json", body, "--out-dir", d,
+            # 다채널(손위치 포함) 분할. 공정서 K=n_steps 강제(--pen 0=Dynp). --pen 실제 전달.
+            run("segment_multi.py", "--body-json", body, "--out-dir", d, "--pen", args.pen,
                 "--channels", args.channels, "--n-steps", args.n_steps, "--min-sec", args.min_sec)
             fast_views.append((name, body, d / "segments.json"))
     if len(fast_views) < 1:

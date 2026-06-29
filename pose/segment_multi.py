@@ -134,13 +134,15 @@ def main():
     bkps = [min(len(X), b * ds) for b in bkps_d]
 
     bounds = [0] + bkps
+    spd_col = want.index("spd") if "spd" in want else None   # 컬럼0 고정 금지(채널순서 무관)
     segs = []
     for i in range(len(bounds) - 1):
         s_idx, e_idx = bounds[i], bounds[i + 1]
         t0 = s_idx * stride / fps; t1 = e_idx * stride / fps
         segs.append({"seg": i + 1, "t_start": round(t0, 2), "t_end": round(t1, 2),
                      "dur_sec": round(t1 - t0, 2),
-                     "mean_speed": round(float(np.mean(X[s_idx:e_idx, 0])), 3)})
+                     "mean_speed": (round(float(np.mean(X[s_idx:e_idx, spd_col])), 3)
+                                    if spd_col is not None else None)})
     (out / "segments.json").write_text(
         json.dumps({"video": data["video"], "eff_fps": round(eff_fps, 2),
                     "channels": want, "scale_px": round(scale, 1), "n_segments": len(segs),

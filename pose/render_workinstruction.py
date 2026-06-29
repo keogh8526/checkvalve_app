@@ -59,7 +59,10 @@ def collapse_to_6(steps):
 
 
 def steps_to_js(steps):
-    """steps.json → 팀원 양식 STEPS 배열(JS) 문자열. 파이프라인 데이터만 사용."""
+    """steps.json → 팀원 양식 STEPS 배열(JS) 문자열. 파이프라인 데이터만 사용.
+    모든 문자열은 json.dumps로 직렬화 → 따옴표·역슬래시·개행이 들어가도 JS가 깨지지 않음."""
+    def j(v):
+        return json.dumps(v, ensure_ascii=False)
     out = []
     for s in steps:
         label = s.get("공정단계", "-")
@@ -67,22 +70,23 @@ def steps_to_js(steps):
         tag = PROC_TAG.get(label, "AI")
         at = int(round(s.get("t_start", 0)))
         parts = s.get("부품표", [])
-        parts_js = "[" + ",".join(f'["{p["부품명"]}",{p["수량"]}]' for p in parts) + "]"
+        parts_js = "[" + ",".join(f'[{j(p["부품명"])},{int(p["수량"])}]' for p in parts) + "]"
         # 작업내용 = 공정서 작업설명(깔끔). 보조 = 표준시간·구간 (ASR 잡담은 제외).
         dur = s.get("표준시간_후보_초", 0)
-        text = (s.get("작업설명") or label).replace('"', "'")
+        text = s.get("작업설명") or label
         sub = f"표준시간 {dur:.0f}초 · 영상 {int(round(s.get('t_start',0)))}~{int(round(s.get('t_end',0)))}s 구간"
         ctrl = s.get("중점관리항목") or ""
         pts = [p.strip() for p in re.split(r"[·,]", ctrl) if p.strip()] or [label]
-        pts_js = "[" + ",".join(f'"{p}"' for p in pts) + "]"
+        pts_js = "[" + ",".join(j(p) for p in pts) + "]"
         end = int(round(s.get("t_end", at)))
+        cap = f"[{label}] 표준시간 {dur:.0f}초 (영상 {at}s~)"
         out.append(
-            f'    {{no:{s["step"]}, tag:"{tag}", at:{at}, end:{end}, insp:{insp}, badge:"{badge}",\n'
-            f'     text:"{text}",\n'
-            f'     sub:"{sub}",\n'
+            f'    {{no:{int(s["step"])}, tag:{j(tag)}, at:{at}, end:{end}, insp:{int(insp)}, badge:{j(badge)},\n'
+            f'     text:{j(text)},\n'
+            f'     sub:{j(sub)},\n'
             f'     pts:{pts_js},\n'
             f'     parts:{parts_js},\n'
-            f'     cap:"[{label}] 표준시간 {dur:.0f}초 (영상 {at}s~)"}}')
+            f'     cap:{j(cap)}}}')
     return "  const STEPS = [\n" + ",\n".join(out) + "\n  ];"
 
 
@@ -94,7 +98,7 @@ def chapters_to_js(steps):
         label = s.get("공정단계", "-")
         badge, _ = BADGE.get(label, (label[:4], 1))
         tag = PROC_TAG.get(label, "·")
-        out.append(f'["{tag} {badge}",{i}]')
+        out.append(f'[{json.dumps(f"{tag} {badge}", ensure_ascii=False)},{i}]')
     return "  const CHAPTERS=[" + ",".join(out) + "];"
 
 
