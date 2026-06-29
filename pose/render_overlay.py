@@ -49,14 +49,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--video", required=True)
     ap.add_argument("--body-json", required=True)
-    ap.add_argument("--hands-json", required=True)
+    ap.add_argument("--hands-json", default=None, help="없으면 몸 스켈레톤만 그림")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--debug-text", action="store_true", help="프레임번호 디버그 텍스트 표시")
     args = ap.parse_args()
 
     body = json.loads(Path(args.body_json).read_text(encoding="utf-8"))
-    hands = json.loads(Path(args.hands_json).read_text(encoding="utf-8"))
     body_by = {f["frame"]: f for f in body["frames"]}
-    hands_by = {f["frame"]: f for f in hands["frames"]}
+    hands_by = {}
+    if args.hands_json and Path(args.hands_json).exists():
+        hands = json.loads(Path(args.hands_json).read_text(encoding="utf-8"))
+        hands_by = {f["frame"]: f for f in hands["frames"]}
 
     cap = cv2.VideoCapture(args.video)
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
@@ -80,8 +83,9 @@ def main():
             if hf:
                 draw_hand(img, hf.get("left_hand"), (80, 255, 80))     # green
                 draw_hand(img, hf.get("right_hand"), (255, 120, 255))  # magenta
-            cv2.putText(img, f"f{idx}", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0,
-                        (0, 0, 255), 2, cv2.LINE_AA)
+            if args.debug_text:
+                cv2.putText(img, f"f{idx}", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0,
+                            (0, 0, 255), 2, cv2.LINE_AA)
             writer.write(img)
             idx += 1
             if idx % 500 == 0:

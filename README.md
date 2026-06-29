@@ -24,13 +24,37 @@ checkvalve_app/
 │   ├── launcher.py                        # 런처 원본 소스 (html 을 브라우저로 오픈)
 │   ├── KakaoTalk_20260606_171834495.mp4  # 작업 영상 H.264/mp4 (앱이 재생)
 │   └── 사용법.txt
-└── pose/                                 # 키포인트 추출 + 검증 파이프라인
-    ├── extract_pose.py    # YOLO11-pose 전신 17점 (GPU 가속)
-    ├── extract_hands.py   # MediaPipe Holistic 전신 33 + 양손 21×2 (손가락)
-    ├── qc_validate.py     # 교차모델 QC: 오탐/이상치 자동 검출
-    ├── render_overlay.py  # 스켈레톤 오버레이 영상 렌더링
-    └── run_pipeline.py    # 폴더 내 모든 영상 일괄 처리 드라이버
+└── pose/                                 # 키포인트 추출 + 작업지도서 자동화 파이프라인
+    │  # ── ★본선(다시점 작업지도서 자동화) — run_all.py 가 6영상을 한 명령으로 연결 ──
+    ├── run_all.py             # ★ 최상위 오케스트레이터: 6영상 → 작업지도서 (단계 A~F)
+    ├── extract_pose.py        # [A] YOLO11m-pose 전신 17점 (Apple MPS 가속)
+    ├── segment_multi.py       # [A] 손위치 다채널 변화점(ruptures) 단계 분할(빠른시점)
+    ├── extract_hands_rtm.py   # [A] 손21점(rtmlib RTMPose-Hand) — 손클로즈업용
+    ├── segment_hands.py       # [A] 손21점 위치채널 분할(손클로즈업)
+    ├── fuse_views.py          # [B] DTW 다시점 합의 분할(표준시간 소스)
+    ├── extract_asr.py         # [C] faster-whisper large-v3 한국어 나레이션
+    ├── anchor_steps.py        # [C] 나레이션→공정서 표준단계 앵커(용어교정)
+    ├── assemble_fused.py      # [D] 합의섹터+앵커+공정서 BOM/설명 → steps.json
+    ├── extract_thumbnails.py  # [E] 단계 대표 프레임 썸네일
+    ├── generate_html.py       # [E] 기본 작업지도서 HTML 렌더
+    ├── render_overlay.py      # [F] 포즈 스켈레톤 오버레이 영상(작업지도서 표시용)
+    ├── render_workinstruction.py  # [F] ★팀 양식(check_valve.html)에 파이프라인 데이터 주입
+    ├── canonical.py           # 공통: 표준단계·BOM·작업설명 정의(단일 출처)
+    │  # ── 단일영상/검증·실험 ──
+    ├── pipeline.py            # 단일영상 7단계 오케스트레이터(블록 검증용)
+    ├── eval_honest.py         # 경계 평가(Hungarian 1:1, ±1/2s, P/R/F1)
+    ├── label_*.py / test_*.py # 라벨링 방법 비교·천장 테스트(DINOv2/앙상블)
+    │  # ── legacy ──
+    ├── extract_hands.py   # (legacy) MediaPipe — Python 3.13 미지원 → extract_hands_rtm.py 사용
+    ├── qc_validate.py     # (legacy) YOLO↔MediaPipe 교차 QC
+    └── run_pipeline.py    # (legacy) QC 일괄 드라이버
 ```
+
+> **확정 스택(2026):** 자세 **YOLO11m-pose** · 분할 **ruptures(손위치 다채널)** · 정렬 **DTW** · ASR **faster-whisper large-v3** · 손(클로즈업) **rtmlib RTMPose-Hand** · 라벨 **규칙/DINOv2**. 본선 진입점은 `run_all.py`(다시점).
+>
+> **산출물:** `app/work_instruction_auto.html` — 팀 양식에 파이프라인 데이터(시간·구간)가 주입되고 공정서 BOM/작업설명이 결합된 작업지도서. 좌측 영상은 포즈 스켈레톤 오버레이.
+>
+> **정직한 한계:** 시간·구간은 파이프라인 **실측**이나 단계 **라벨 자동정확도는 22~67%**(동시진행 공정은 영상만으로 분리 불가)라 **자동초안 + 사람검수**가 현재 천장. 작업설명·중점관리·BOM은 공정서 문서 전사값(측정 아님). `data/`·`results/`는 용량/보안상 git 미포함이라 클린 클론에서는 영상 없이 재실행 불가(산출 HTML·영상은 포함).
 
 ---
 
@@ -111,10 +135,38 @@ python pose/run_pipeline.py --data-dir ./videos --out-dir ./results
 
 - YOLO 가중치(`yolo11x-pose.pt`)와 MediaPipe 모델(`holistic_landmarker.task`)은 **첫 실행 시
   자동 다운로드**되며 `.gitignore` 로 제외됩니다.
-- `data/`, `results/`, 오버레이 영상 등 대용량 산출물도 저장소에 포함하지 않습니다(로컬 생성).
+- **원본 공정 영상과 키포인트 데이터(`data/`, `results/`)는 용량(수백 MB~)이 커서 git에 포함하지
+  않습니다.** GitHub 파일 용량 제한(100MB) 때문이며, 영상·데이터는 **별도(클라우드/로컬)로 보관**합니다.
+  레포에는 코드만 있으므로, 실행하려면 영상을 `data/` 에 직접 넣어야 합니다.
 - 작업지도서가 재생하는 `app/KakaoTalk_...mp4`(약 72MB)만 앱 동작을 위해 포함되어 있습니다.
 
-## 사용 모델
+---
 
-- [Ultralytics YOLO11-pose](https://github.com/ultralytics/ultralytics) — 전신 17 키포인트
-- [MediaPipe Holistic Landmarker](https://ai.google.dev/edge/mediapipe) — 전신 33 + 양손 각 21 키포인트
+## 작업지도서 자동화 파이프라인 (`pose/` 신규 모듈)
+
+영상 → 키포인트 → 단계 분할 → 작업지도서로 잇는 자동화 모듈. `pipeline.py` 가 아래를 순서대로 묶는다.
+
+| 모듈 | 역할 |
+|------|------|
+| `extract_pose.py` | YOLO11-pose 전신 키포인트 (Apple MPS 가속 지원) |
+| `extract_hands_rtm.py` | rtmlib RTMPose-Hand 손 21점 (MediaPipe의 Python 3.13 대체) |
+| `segment.py` | 손목속도(One-Euro 평활) → `ruptures` 변화점으로 작업 단계 자동 분할 |
+| `align_dtw.py` | DTW로 서로 다른 각도·회차 영상을 공통 타임라인에 정렬 |
+| `extract_asr.py` | faster-whisper(large-v3) 한국어 나레이션 전사 + 도메인 어휘 주입 |
+| `anchor_steps.py` | 나레이션을 공정관리지침서 표준 단계에 매핑 + 용어 표준화 |
+| `build_steps.py` / `refine_steps.py` | 구간 × 나레이션 × 공정단계 융합, 부가/비부가(VA/NVA) 동작 구별 |
+| `generate_html.py` | 단계 결과(`steps.json`)를 작업지도서 HTML로 렌더 |
+| `pipeline.py` | 위 단계를 한 명령으로 연결하는 오케스트레이터 |
+
+> 설계 원칙: **수치(시간·구간)는 측정값, 단계명·순서는 공정관리지침서, 설명은 나레이션** 에서 가져오고
+> LLM은 문장만 다듬어 환각을 막는다. 출력은 자동 초안이며 **사람 검수 후 확정(반자동)** 한다.
+
+## 사용 모델 (확정 스택)
+
+- [Ultralytics YOLO11m-pose](https://github.com/ultralytics/ultralytics) — 전신 17 키포인트 (Apple MPS)
+- [faster-whisper large-v3](https://github.com/SYSTRAN/faster-whisper) — 한국어 나레이션 ASR
+- [ruptures](https://centre-borelli.github.io/ruptures-docs/) — 단계 분할(changepoint)
+- DTW (numpy 직접 구현) — 다시점/회차 정렬
+- (선택) [rtmlib RTMPose-Hand](https://github.com/Tau-J/rtmlib) — 손 21점 (closeup, MediaPipe 대체)
+
+> ⚠️ (legacy) MediaPipe Holistic 은 Python 3.13 미지원으로 본선에서 제외됨. 위 §1·§2의 일부 실행 예시는 legacy QC 경로 기준이며, 작업지도서 자동화 본선은 `pose/pipeline.py` 입니다.

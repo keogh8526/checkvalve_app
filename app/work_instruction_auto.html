@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>작업지도서 · Dual Plate Check Valve (공정 8)</title>
+<style>
+  :root{
+    --bd:#8b94a3;          /* 표 테두리 */
+    --bd2:#b9c0cb;         /* 옅은 내부선 */
+    --hd:#e9edf3;          /* 헤더 셀 음영 */
+    --hd2:#f3f5f9;
+    --ink:#16202c; --ink2:#3f4a59; --mut:#788294;
+    --navy:#1f3a5f; --accent:#0e7c8b;
+    --hl:#fff6c9;          /* 현재 단계 하이라이트(형광펜) */
+    --hl-bd:#e6c64a;
+    --seq:#6b5ca6; --seqbg:#efebf8;
+    --self:#b4761b; --selfbg:#fbf0db;
+    --ok:#1c8a4e; --okbg:#e7f6ec;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif;
+    color:var(--ink); background:#cdd3db; line-height:1.45; font-size:13px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'SF Mono',Consolas,'D2Coding',monospace}
+
+  /* 상단 도구 막대 (인쇄 시 숨김) */
+  .toolbar{position:sticky;top:0;z-index:20;background:#1b2430;color:#e7ecf2;
+    display:flex;align-items:center;gap:10px;padding:9px 16px;flex-wrap:wrap}
+  .toolbar .t{font-weight:700;font-size:13px;letter-spacing:.3px}
+  .toolbar .t small{color:#93a0b2;font-weight:400;margin-left:8px}
+  .toolbar .sp{flex:1}
+  .toolbar .clk{font-variant-numeric:tabular-nums;background:#0f1620;color:#cfe6ea;
+    padding:6px 11px;border-radius:5px;font-size:12.5px;font-weight:700}
+  .tb{border:0;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700;
+    padding:7px 13px;border-radius:5px;background:#33414f;color:#fff}
+  .tb:hover{background:#3f4f60}
+  .tb.go{background:var(--accent)} .tb.go:hover{background:#0c6c79}
+
+  /* 용지 */
+  .page{max-width:1160px;margin:18px auto 40px;background:#fff;
+    border:1.5px solid var(--bd);box-shadow:0 6px 22px rgba(20,32,44,.18)}
+
+  table{border-collapse:collapse;width:100%}
+  td,th{border:1px solid var(--bd);padding:6px 9px;vertical-align:middle}
+  .lbl{background:var(--hd);font-weight:700;color:var(--ink2);text-align:center;
+    white-space:nowrap;font-size:12.5px}
+  thead th{background:var(--hd);font-weight:700;color:var(--ink2);font-size:12.5px;
+    text-align:center}
+  .c{text-align:center} .l{text-align:left}
+
+  /* 제목 줄 */
+  .titlebar td{border:1px solid var(--bd)}
+  .doctitle{background:var(--navy);color:#fff;text-align:center;font-size:22px;
+    font-weight:800;letter-spacing:14px;padding:14px 0 14px 14px;width:200px}
+  .appr{width:210px;padding:0}
+  .appr table{height:100%}
+  .appr .ah{background:var(--hd2);font-size:11px;color:var(--mut);font-weight:700;padding:4px}
+  .appr .av{padding:9px 4px;text-align:center;font-size:12.5px}
+  .appr .side{writing-mode:vertical-rl;text-orientation:upright;background:var(--hd);
+    font-weight:700;color:var(--ink2);width:26px;letter-spacing:3px;font-size:12px}
+  .meta-v{font-size:14px;font-weight:700}
+  .meta-v small{display:block;font-weight:400;color:var(--mut);font-size:11.5px;margin-top:1px}
+  .big{font-size:18px;color:var(--navy);font-weight:800}
+
+  /* 본문 작업표 */
+  .work td{vertical-align:top}
+  .work thead th{padding:8px 6px}
+  .figcell{width:372px;background:#fbfcfd;padding:10px;vertical-align:top}
+  .figttl{font-size:11.5px;color:var(--mut);font-weight:700;margin-bottom:7px;text-align:center}
+  .vidwrap{position:relative;border:1px solid var(--bd2);background:#0b1220;
+    aspect-ratio:16/9;overflow:hidden}
+  .vidwrap video{width:100%;height:100%;display:block;background:#0b1220}
+  /* 영상 로드 실패 시 안내 오버레이 */
+  .vidwrap .verr{position:absolute;inset:0;display:none;flex-direction:column;
+    align-items:center;justify-content:center;gap:7px;text-align:center;
+    background:#0b1220;color:#e7ecf2;font-size:12.5px;padding:16px;line-height:1.55}
+  .vidwrap .verr.show{display:flex}
+  .vidwrap .verr b{color:#ff8a8a;font-size:13.5px}
+  /* aspect-ratio 미지원(구형 Safari) 폴백: padding-bottom 16:9 */
+  @supports not (aspect-ratio: 16 / 9){
+    .vidwrap{height:0;padding-bottom:56.25%}
+    .vidwrap video, .vidwrap .verr{position:absolute;inset:0}
+  }
+  .vtag{position:absolute;top:7px;left:7px;background:rgba(255,255,255,.94);color:var(--navy);
+    font-weight:800;font-size:12px;padding:3px 8px;border:1px solid var(--bd)}
+  .vlive{position:absolute;top:7px;right:7px;background:rgba(15,23,42,.6);color:#fff;
+    font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:3px}
+  .vlive b{color:#ff6b6b}
+  .cap{font-size:12px;color:var(--ink2);margin-top:8px;min-height:46px;
+    border:1px dashed var(--bd2);background:#fff;padding:7px 9px}
+  .cap b{color:var(--navy)}
+  .chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+  .chip{border:1px solid var(--bd);background:#fff;padding:4px 9px;font-size:11.5px;
+    font-weight:700;color:var(--ink2);cursor:pointer}
+  .chip:hover{background:var(--hd)} .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+  .stepno{width:48px;text-align:center;font-weight:800;font-size:15px;color:var(--navy)}
+  .stepno small{display:block;color:var(--mut);font-weight:700;font-size:10.5px;margin-top:2px}
+  .work .desc{width:auto}
+  .desc .d1{font-weight:700;font-size:13.5px;line-height:1.5}
+  .desc .d2{color:var(--mut);font-size:11.5px;margin-top:3px}
+  .ctrl{width:270px}
+  .ctrl ul{margin:0;padding-left:17px} .ctrl li{margin:2px 0;font-size:12.5px}
+  .insp{width:64px;text-align:center}
+  .tagi{display:inline-block;font-size:11px;font-weight:800;padding:3px 7px;border:1px solid}
+  .tagi.s1{color:var(--seq);background:var(--seqbg);border-color:#cdc2ea}
+  .tagi.s2{color:var(--self);background:var(--selfbg);border-color:#ecd6a6}
+  .tagi.s3{color:#0e7c8b;background:#e1f3f5;border-color:#b3dfe3}
+  tr.row{cursor:pointer}
+  tr.row:hover td:not(.figcell){background:#f6f8fb}
+  tr.row.active td:not(.figcell){background:var(--hl)}
+  tr.row.active .stepno{color:#7a5d00}
+  tr.row.done .stepno::after{content:" ✓";color:var(--ok)}
+
+  /* 하단 표들 */
+  .ckcell{padding:7px 9px}
+  .ck{display:inline-flex;align-items:flex-start;gap:7px;cursor:pointer;font-size:12.5px;
+    color:var(--ink2);margin:3px 16px 3px 0;line-height:1.35}
+  .ck input{width:16px;height:16px;accent-color:var(--accent);margin:1px 0 0;cursor:pointer}
+  .grpv{font-weight:800;color:var(--seq);font-size:12px;white-space:nowrap}
+  .grpv.b{color:var(--self)}
+  .passbox{font-weight:800;text-align:center;background:var(--hd2);color:var(--mut)}
+  .passbox.ok{background:var(--okbg);color:var(--ok)}
+  .note{font-size:11.5px;color:#5a6678;line-height:1.6;padding:9px 11px;background:#fafbfc}
+  .note b{color:var(--ink2)}
+
+  @media print{
+    body{background:#fff}
+    .toolbar{display:none}
+    .page{margin:0;border:1.5px solid #000;box-shadow:none;max-width:none}
+    td,th,.page{border-color:#000 !important}
+  }
+  @media(max-width:820px){
+    .doctitle{letter-spacing:6px;font-size:18px;width:auto}
+    .work, .work tbody, .work tr, .work td{display:block;width:auto}
+    .work thead{display:none}
+    .figcell{width:auto}
+    .stepno{display:inline-block;border:0}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="t">작업지도서(자동생성)<small>파이프라인 산출 · Dual Plate Check Valve · 공정 8</small></div>
+  <div class="sp"></div>
+  <div class="clk" id="clk">0:00 / 0:00</div>
+  <button class="tb go" id="btnPlay">▶ 재생</button>
+  <button class="tb" id="btnRestart">↺ 처음</button>
+  <button class="tb" id="btnPrint">🖨 인쇄</button>
+  <button class="tb" id="btnFull">⛶ 전체화면</button>
+</div>
+
+<div class="page" id="page">
+
+  <!-- 제목 + 기본정보 + 결재 -->
+  <table class="titlebar">
+    <tr>
+      <td class="doctitle" rowspan="3">작 업<br>지도서</td>
+      <td class="lbl">품&nbsp;&nbsp;명</td>
+      <td class="meta-v">체크밸브<small>Dual Plate Wafer</small></td>
+      <td class="lbl">도&nbsp;&nbsp;번</td>
+      <td class="meta-v mono">GMT-CV-008</td>
+      <td class="appr" rowspan="3">
+        <table>
+          <tr><td class="side" rowspan="2">결재</td>
+              <td class="ah">작성</td><td class="ah">검토</td><td class="ah">승인</td></tr>
+          <tr><td class="av">팀원</td><td class="av">멘토</td><td class="av">팀장</td></tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td class="lbl">공정명</td>
+      <td class="meta-v" style="font-size:13px">공정 8 · DISC·SPACER·HINGE PIN 조립</td>
+      <td class="lbl">관리번호</td>
+      <td class="meta-v">8</td>
+    </tr>
+    <tr>
+      <td class="lbl">작업<br>표준시간</td>
+      <td><span class="big">95초</span><small style="color:var(--mut)"> 측정값 · 전체 95초(검사 포함) · 6영상 다시점 실측</small></td>
+      <td class="lbl">개&nbsp;&nbsp;정</td>
+      <td class="meta-v mono">Rev.0 · ’26.06</td>
+    </tr>
+  </table>
+
+  <!-- 작업 순서/방법 + 그림(영상) -->
+  <table class="work">
+    <thead>
+      <tr>
+        <th class="figcell">그림 · 작업 동영상</th>
+        <th style="width:48px">순서</th>
+        <th>작업 내용 및 방법</th>
+        <th style="width:270px">중점 관리 항목</th>
+        <th style="width:64px">검사</th>
+      </tr>
+    </thead>
+    <tbody id="rows"><!-- JS --></tbody>
+  </table>
+
+  <!-- 사용 치공구 / 안전 -->
+  <table>
+    <tr>
+      <td class="lbl" style="width:104px">사용 치공구·장비</td>
+      <td class="l">1. 조립 지그&nbsp;&nbsp;&nbsp;2. 스프링 거치용 가는 공구(픽 / 육각렌치)&nbsp;&nbsp;&nbsp;3. 클로즈업 캡</td>
+    </tr>
+    <tr>
+      <td class="lbl">환경 · 안전</td>
+      <td class="l">장갑 착용 — 손 키포인트는 클로즈업 캡으로 보강 <b style="color:var(--self)">(압착 주의)</b></td>
+    </tr>
+  </table>
+
+  <!-- 검사 기준 (체크리스트) -->
+  <table>
+    <tr>
+      <td class="lbl" style="width:104px;height:auto" rowspan="2">검사 기준<br>Check&nbsp;List</td>
+      <td style="width:60px"><span class="grpv">순차<br>검사</span></td>
+      <td class="ckcell" id="seqChecks"></td>
+      <td class="passbox" id="pass" style="width:150px" rowspan="2">검사 미완료<br>0 / 5</td>
+    </tr>
+    <tr>
+      <td><span class="grpv b">자주<br>검사</span></td>
+      <td class="ckcell" id="selfChecks"></td>
+    </tr>
+  </table>
+
+  <!-- 개정 이력 -->
+  <table>
+    <thead><tr>
+      <th style="width:56px">Rev</th><th>개정 내용</th>
+      <th style="width:80px">작성</th><th style="width:96px">일자</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="c mono">0</td><td class="l">최초 제정 — 업로드 영상(체크밸브 조립) 분석 기반 파일럿</td>
+          <td class="c">팀</td><td class="c mono">’26.06</td></tr>
+      <tr><td class="c mut">·</td><td class="l" style="color:var(--mut)">개정 예정</td><td></td><td></td></tr>
+    </tbody>
+  </table>
+
+
+</div>
+
+<script>
+  const STEPS = [
+    {no:1, tag:"①", at:0, end:11, insp:1, badge:"준비",
+     text:"가공 완료된 DISC·SPACER·HINGE PIN과 SPRING을 준비한다.",
+     sub:"표준시간 11초 · 영상 0~11s 구간",
+     pts:["부품 누락","오부품 없을 것"],
+     parts:[["DISC",2],["SPACER",1],["HINGE PIN",1],["SPRING",1]],
+     cap:"[부품 준비] 표준시간 11초 (영상 0s~)"},
+    {no:2, tag:"②", at:36, end:46, insp:1, badge:"정렬",
+     text:"DISC 사이에 SPRING과 SPACER를 1자로 정렬한다.",
+     sub:"표준시간 9초 · 영상 36~46s 구간",
+     pts:["SPRING 형상","방향 확인","1자 정렬"],
+     parts:[["SPRING",1],["SPACER",1],["DISC",2]],
+     cap:"[정렬(SPRING·SPACER)] 표준시간 9초 (영상 36s~)"},
+    {no:3, tag:"③", at:11, end:36, insp:1, badge:"핀삽입",
+     text:"정렬된 상태에서 HINGE PIN을 삽입해 조립한다.",
+     sub:"표준시간 25초 · 영상 11~36s 구간",
+     pts:["핀 돌출 없을 것","양쪽 균등 삽입"],
+     parts:[["HINGE PIN",1],["DISC",2]],
+     cap:"[HINGE PIN 조립] 표준시간 25초 (영상 11s~)"},
+    {no:4, tag:"④", at:46, end:55, insp:1, badge:"가이드",
+     text:"조립된 HINGE PIN 양쪽으로 GUIDE를 조립한다.",
+     sub:"표준시간 10초 · 영상 46~55s 구간",
+     pts:["양쪽 GUIDE 정위치 결합"],
+     parts:[["GUIDE",2]],
+     cap:"[GUIDE 결합] 표준시간 10초 (영상 46s~)"},
+    {no:5, tag:"⑤", at:55, end:76, insp:1, badge:"바디결합",
+     text:"BODY의 GUIDE 삽입부에 맞추어 밀어 넣는다.",
+     sub:"표준시간 21초 · 영상 55~76s 구간",
+     pts:["삽입부 정합","단차 없을 것"],
+     parts:[["BODY",1],["GUIDE",2]],
+     cap:"[BODY-GUIDE 결합] 표준시간 21초 (영상 55s~)"},
+    {no:6, tag:"⑥", at:76, end:95, insp:2, badge:"체결",
+     text:"BODY와 GUIDE 중간 부분에 TAP 가공 후 SET SCREW를 결합한다.",
+     sub:"표준시간 19초 · 영상 76~95s 구간",
+     pts:["체결 누락 없을 것","토크 확인"],
+     parts:[["SET SCREW",2]],
+     cap:"[SET SCREW 결합] 표준시간 19초 (영상 76s~)"}
+  ];
+  const CHAPTERS=[["① 준비",0],["② 정렬",1],["③ 핀삽입",2],["④ 가이드",3],["⑤ 바디결합",4],["⑥ 체결",5]];
+  const SEQ=["스프링·스페이서 일직선 (어긋남 없을 것)","핀 끝단 돌출 없을 것","스프링 다리 양측 균등 거치"];
+  const SELF=["핀 삽입 후 디스크 회전·자동 복귀 원활할 것","부품 누락 없을 것 (스프링 형상·방향 확인)"];
+  const $=s=>document.querySelector(s);
+
+  // ── 작업표 본문 (그림 셀은 1행에 rowspan) ──
+  const rows=$("#rows");
+  STEPS.forEach((st,i)=>{
+    const tr=document.createElement("tr");
+    tr.className="row"; tr.dataset.i=i;
+    let fig="";
+    if(i===0){
+      fig=`<td class="figcell" rowspan="${STEPS.length}">
+        <div class="figttl">그림 · 작업 동영상 (영상 실제 장면)</div>
+        <div class="vidwrap">
+          <video id="vid" controls playsinline preload="metadata" src="front_skeleton.mp4"></video>
+          <div class="vtag" id="vtag">1-1</div>
+          <div class="verr" id="verr">
+            <b>영상을 재생할 수 없습니다</b>
+            <span>브라우저가 영상 코덱을 지원하지 않거나<br>mp4 파일이 같은 폴더에 없습니다.<br>최신 Chrome·Edge 또는 Safari로 열어 주세요.</span>
+          </div>
+        </div>
+        <div class="cap" id="cap"></div>
+        <div class="chips" id="chips"></div>
+      </td>`;
+    }
+    const IMAP={1:["s1","순차"],2:["s2","자주"],3:["s3","측정"]};
+    const ig=IMAP[st.insp]||IMAP[1];
+    const insp = `<span class="tagi ${ig[0]}">${ig[1]}</span>`;
+    tr.innerHTML = fig +
+      `<td class="stepno">${st.no}<small>${st.badge}</small></td>
+       <td class="desc"><div class="d1">${st.text}</div><div class="d2">${st.sub}</div></td>
+       <td class="ctrl"><ul>${st.pts.map(p=>`<li>${p}</li>`).join("")}</ul></td>
+       <td class="insp">${insp}</td>`;
+    tr.onclick = e=>{ if(e.target.closest(".vidwrap,.chip"))return; seekToStep(i); };
+    rows.appendChild(tr);
+  });
+  const rowEls=[...document.querySelectorAll("tr.row")];
+  const vid=$("#vid");
+
+  const chBox=$("#chips");
+  CHAPTERS.forEach(([label,idx])=>{
+    const c=document.createElement("span"); c.className="chip"; c.textContent=label;
+    c.onclick=()=>seekToStep(idx); chBox.appendChild(c);
+  });
+  const chipEls=[...document.querySelectorAll(".chip")];
+
+  // ── 검사 체크리스트 ──
+  function renderChecks(box,items){
+    items.forEach(t=>{
+      const l=document.createElement("label"); l.className="ck";
+      l.innerHTML=`<input type="checkbox"><span>${t}</span>`;
+      l.querySelector("input").onchange=updatePass;
+      box.appendChild(l);
+    });
+  }
+  renderChecks($("#seqChecks"),SEQ);
+  renderChecks($("#selfChecks"),SELF);
+  const allChecks=[...document.querySelectorAll(".ck input")];
+  function updatePass(){
+    const n=allChecks.filter(c=>c.checked).length, tot=allChecks.length, ok=n===tot;
+    const p=$("#pass"); p.classList.toggle("ok",ok);
+    p.innerHTML = (ok?"검사 통과 ✓<br>":"검사 미완료<br>") + n+" / "+tot;
+  }
+
+  // ── 영상 ↔ 단계 동기화 (실제 영상 장면 시각 기준) ──
+  const ATS=STEPS.map(s=>s.at);          // 각 단계가 영상에서 시작되는 초
+  let D=0,cur=-1;
+  const fmt=t=>{t=Math.max(0,Math.floor(t||0));return Math.floor(t/60)+":"+String(t%60).padStart(2,"0");};
+  function segAt(t){let s=0;for(let i=0;i<ATS.length;i++)if(t>=ATS[i]-0.05)s=i;return s;}
+  function setSeg(seg){
+    if(seg===cur)return; cur=seg;
+    rowEls.forEach((el,i)=>{el.classList.toggle("active",i===seg);el.classList.toggle("done",i<seg);});
+    $("#vtag").textContent=STEPS[seg].tag;
+    $("#cap").innerHTML="<b>["+STEPS[seg].tag+"]</b> "+STEPS[seg].cap;
+    chipEls.forEach((c,ci)=>c.classList.toggle("on",CHAPTERS[ci][1]===seg));
+  }
+  function seekToStep(i){ if(!D)return; vid.currentTime=ATS[i]+0.05; setSeg(i); }
+
+  vid.addEventListener("loadedmetadata",()=>{D=vid.duration||0;$("#clk").textContent="0:00 / "+fmt(D);setSeg(0);});
+  vid.addEventListener("timeupdate",()=>{const t=vid.currentTime;setSeg(segAt(t));$("#clk").textContent=fmt(t)+" / "+fmt(D);});
+  vid.addEventListener("ended",()=>{rowEls.forEach(el=>{el.classList.add("done");el.classList.remove("active")});cur=-1;});
+  vid.addEventListener("play",()=>$("#btnPlay").textContent="❚❚ 정지");
+  vid.addEventListener("pause",()=>$("#btnPlay").textContent="▶ 재생");
+  // 영상 로드 실패(코덱 미지원·파일 없음) 시 안내, 성공 시 숨김
+  vid.addEventListener("error",()=>$("#verr").classList.add("show"));
+  vid.addEventListener("loadeddata",()=>$("#verr").classList.remove("show"));
+
+  $("#btnPlay").onclick=()=>vid.paused?vid.play():vid.pause();
+  $("#btnRestart").onclick=()=>{vid.currentTime=0;rowEls.forEach(e=>e.classList.remove("done"));vid.play();};
+  $("#btnPrint").onclick=()=>window.print();
+  // 전체화면 — 표준 API 우선, 구형 Safari는 webkit 접두사로 폴백
+  $("#btnFull").onclick=()=>{
+    const page=$("#page");
+    const fsEl=document.fullscreenElement||document.webkitFullscreenElement;
+    if(fsEl){ (document.exitFullscreen||document.webkitExitFullscreen).call(document); }
+    else { (page.requestFullscreen||page.webkitRequestFullscreen).call(page); }
+  };
+  document.addEventListener("keydown",e=>{
+    if(e.code==="Space"&&!/INPUT|BUTTON/.test(e.target.tagName)){e.preventDefault();vid.paused?vid.play():vid.pause();}
+  });
+
+  // ── 멘토 보강: 공정버튼/행 클릭 → 단일 하이라이트(강조) + 사용부품(BOM) ──
+  (function(){
+    // 영상 아래 부품표 박스
+    const cap = document.getElementById("cap");
+    const box = document.createElement("div");
+    box.id = "partsbox";
+    box.style.cssText = "margin-top:8px;border:1.5px solid var(--navy);background:#eef4ff;padding:9px 11px;font-size:12.5px;border-radius:4px";
+    if(cap) cap.after(box);
+    const rowEls = [...document.querySelectorAll("tr.row")];
+
+    // 전체 BOM(완성품 구성) — 같은 부품이 여러 단계에 나오므로 '합산'이 아니라 '최댓값'.
+    //  (예: DISC가 준비·정렬·핀삽입 단계마다 표시돼도 실제 밸브엔 2개 → 합산하면 6개로 틀림)
+    function fullBom(){
+      const m={}, ord=[];
+      STEPS.forEach(s=>(s.parts||[]).forEach(([n,q])=>{ if(!(n in m)){m[n]=0;ord.push(n);} m[n]=Math.max(m[n],q); }));
+      return ord.map(n=>[n,m[n]]);
+    }
+    function showParts(seg){
+      if(seg<0){ const p=fullBom();
+        box.innerHTML = "<b style='color:var(--navy)'>전체 사용 부품(완성품 BOM)</b><br>" +
+          p.map(x=>"· "+x[0]+" × "+x[1]).join("&nbsp;&nbsp;"); return; }
+      const st=STEPS[seg]||{}, p=st.parts||[];
+      box.innerHTML = "<b style='color:var(--navy)'>["+(st.badge||"")+"] 사용 부품(재료)</b><br>" +
+        (p.length ? p.map(x=>"· "+x[0]+" × "+x[1]).join("&nbsp;&nbsp;") : "· (부품 정보 없음)");
+    }
+
+    // 강조 보강 CSS(.active 배경 위에 테두리만 추가; .dim은 나머지 흐림)
+    const fcss=document.createElement("style");
+    fcss.textContent=".row.dim td:not(.figcell){opacity:.32} .row.focus td:not(.figcell){outline:2px solid var(--hl-bd)}";
+    document.head.appendChild(fcss);
+
+    // ★단일 하이라이트: setSeg를 감싸 focus/dim/부품표를 .active와 항상 일치 (두 행 동시강조 방지)
+    let filterOn=false, lockSeg=-1;
+    const _setSeg = setSeg;
+    setSeg = function(seg){
+      _setSeg(seg);                                   // 템플릿: .active=seg, 칩 on
+      rowEls.forEach((el,i)=>{ el.classList.toggle("focus", filterOn&&i===seg);
+                               el.classList.toggle("dim",   filterOn&&i!==seg); });
+      showParts(filterOn?seg:-1);
+    };
+
+    // 영상시간→단계: at/end 구간 기반(공정서순서로 at이 뒤섞여도 정확)
+    segAt = function(t){
+      let best=0,bestAt=-1;
+      for(let i=0;i<STEPS.length;i++){
+        if(t>=STEPS[i].at-0.05 && t<STEPS[i].end) return i;
+        if(STEPS[i].at<=t && STEPS[i].at>bestAt){ bestAt=STEPS[i].at; best=i; }
+      }
+      return best;
+    };
+
+    function clearFilter(){ filterOn=false; lockSeg=-1;
+      rowEls.forEach(el=>el.classList.remove("focus","dim"));
+      [...document.querySelectorAll(".chip")].forEach(x=>x.classList.remove("on"));
+      showParts(-1); }
+    window.clearFilter=clearFilter;
+
+    // 칩(공정버튼) = 필터 토글 (같은 버튼 재클릭 = 전체)
+    const chips=[...document.querySelectorAll(".chip")];
+    chips.forEach((c,ci)=>{
+      const idx=(typeof CHAPTERS!=="undefined"&&CHAPTERS[ci])?CHAPTERS[ci][1]:ci;
+      c.onclick=()=>{
+        if(filterOn && lockSeg===idx){ clearFilter(); return; }
+        filterOn=true; lockSeg=idx;
+        if(D){ vid.pause(); vid.currentTime=STEPS[idx].at+0.05; }
+        setSeg(idx);
+      };
+    });
+    // '전체' 버튼
+    const allBtn=document.createElement("span");
+    allBtn.className="chip"; allBtn.textContent="전체"; allBtn.style.fontWeight="800";
+    allBtn.onclick=clearFilter;
+    const chipBox=document.getElementById("chips"); if(chipBox) chipBox.prepend(allBtn);
+
+    // 행(오른쪽 공정) 직접 클릭 = 칩과 동일하게 그 공정으로 필터 → 그 공정 부품 표시.
+    //  (템플릿 tr.onclick의 seekToStep이 먼저 실행된 뒤 이 핸들러가 filterOn을 켜고 setSeg로 부품 갱신)
+    rowEls.forEach((el,i)=>{ el.addEventListener("click",e=>{
+      if(e.target.closest(".vidwrap,.chip,#partsbox")) return;
+      filterOn=true; lockSeg=i; setSeg(i); }); });
+
+    showParts(-1);  // 시작 = 전체 BOM
+  })();
+</script>
+</body>
+</html>

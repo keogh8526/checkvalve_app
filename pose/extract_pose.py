@@ -31,9 +31,9 @@ KEYPOINT_NAMES = [
 def parse_args():
     p = argparse.ArgumentParser(description="Extract pose keypoints from a video.")
     p.add_argument("--video", required=True, help="Path to the input video.")
-    p.add_argument("--model", default="yolo11x-pose.pt",
-                   help="Ultralytics pose model (auto-downloaded). "
-                        "Accuracy: yolo11x > l > m > s > n.")
+    p.add_argument("--model", default="yolo11m-pose.pt",
+                   help="Ultralytics pose model. 확정=yolo11m(레포 포함, MPS 균형). "
+                        "정확도순 yolo11x > l > m > s > n.")
     p.add_argument("--conf", type=float, default=0.5, help="Detection confidence threshold.")
     p.add_argument("--out-json", default=None, help="Output JSON path (default: <video>_keypoints.json).")
     p.add_argument("--out-video", default=None, help="Annotated video path (default: <video>_pose.mp4).")
@@ -52,8 +52,12 @@ def main():
     out_json = Path(args.out_json) if args.out_json else video_path.with_name(video_path.stem + "_keypoints.json")
     out_video = Path(args.out_video) if args.out_video else video_path.with_name(video_path.stem + "_pose.mp4")
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    gpu_name = torch.cuda.get_device_name(0) if device == "cuda" else "CPU"
+    if torch.cuda.is_available():
+        device, gpu_name = "cuda", torch.cuda.get_device_name(0)
+    elif getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+        device, gpu_name = "mps", "Apple MPS"
+    else:
+        device, gpu_name = "cpu", "CPU"
     print(f"[info] device   : {device} ({gpu_name})")
     print(f"[info] model    : {args.model}")
 
