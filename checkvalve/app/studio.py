@@ -6,8 +6,11 @@ under OUTPUT with a path-boundary guard. See ARCHITECTURE.md §5 for the contrac
 import http.server
 import json
 import mimetypes
+import re
 import socketserver
 import urllib.parse
+
+PART_ID_RE = re.compile(r"[A-Za-z0-9_\-]+")   # /api/doc part_id allow-list (path-safe)
 
 from ..config import OUTPUT, STATIC, TEMPLATE, is_timeline
 from ..paths import list_stems
@@ -54,11 +57,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
         ctype = ctype or (mimetypes.guess_type(str(fs))[0] or "application/octet-stream")
         size = fs.stat().st_size
         rng = self.headers.get("Range")
-        with open(fs, "rb") as f:
-            if rng and rng.startswith("bytes="):
-                s, _, e = rng[6:].partition("-")
+        do_range = False
+        if rng and rng.startswith("bytes="):
+            s, _, e = rng[6:].partition("-")
+            try:
                 start = int(s) if s else 0
                 end = min(int(e), size - 1) if e else size - 1
+                do_range = True
+            except ValueError:
+                do_range = False                     # malformed Range -> serve full body
+        with open(fs, "rb") as f:
+            if do_range:
                 start = min(start, size - 1)
                 length = end - start + 1
                 self.send_response(206)
@@ -185,6 +194,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     return self._json(409, {"error": str(e)})
             if path == "/api/doc":
                 part_id = self._qs("part_id") or "GMT-CV-008"
+                if not PART_ID_RE.fullmatch(part_id):     # block path traversal via part_id
+                    return self._json(400, {"error": "invalid part_id"})
                 return self._json(200, doc_stub.store_doc(part_id, self._raw_body()))
             return self._json(404, {"error": "not found"})
         except ValueError as e:

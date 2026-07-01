@@ -10,7 +10,10 @@ from ..config import OUTPUT
 
 
 def store_doc(part_id: str, pdf_bytes: bytes) -> dict:
-    d = OUTPUT / "_specs" / part_id
+    base = OUTPUT / "_specs"
+    d = (base / part_id).resolve()
+    if not d.is_relative_to(base.resolve()):        # defense-in-depth vs path traversal
+        raise ValueError("invalid part_id")
     d.mkdir(parents=True, exist_ok=True)
     (d / "source.pdf").write_bytes(pdf_bytes)
     spec = {"part_id": part_id, "status": "stub", "parsed": False,

@@ -264,6 +264,7 @@
   const SEQ=["스프링·스페이서 일직선 (어긋남 없을 것)","핀 끝단 돌출 없을 것","스프링 다리 양측 균등 거치"];
   const SELF=["핀 삽입 후 디스크 회전·자동 복귀 원활할 것","부품 누락 없을 것 (스프링 형상·방향 확인)"];
   const $=s=>document.querySelector(s);
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   // ── 작업표 본문 (그림 셀은 1행에 rowspan) ──
   const rows=$("#rows");
@@ -286,9 +287,9 @@
     const ig=IMAP[st.insp]||IMAP[1];
     const insp = `<span class="tagi ${ig[0]}">${ig[1]}</span>`;
     tr.innerHTML = fig +
-      `<td class="stepno">${st.no}<small>${st.badge}</small></td>
-       <td class="desc"><div class="d1">${st.text}</div><div class="d2">${st.sub}</div></td>
-       <td class="ctrl"><ul>${st.pts.map(p=>`<li>${p}</li>`).join("")}</ul></td>
+      `<td class="stepno">${st.no}<small>${esc(st.badge)}</small></td>
+       <td class="desc"><div class="d1">${esc(st.text)}</div><div class="d2">${esc(st.sub)}</div></td>
+       <td class="ctrl"><ul>${(st.pts||[]).map(p=>`<li>${esc(p)}</li>`).join("")}</ul></td>
        <td class="insp">${insp}</td>`;
     tr.onclick = e=>{ if(e.target.closest(".vidwrap,.chip"))return; seekToStep(i); };
     rows.appendChild(tr);
@@ -307,7 +308,7 @@
   function renderChecks(box,items){
     items.forEach(t=>{
       const l=document.createElement("label"); l.className="ck";
-      l.innerHTML=`<input type="checkbox"><span>${t}</span>`;
+      l.innerHTML=`<input type="checkbox"><span>${esc(t)}</span>`;
       l.querySelector("input").onchange=updatePass;
       box.appendChild(l);
     });
@@ -330,7 +331,7 @@
     if(seg===cur)return; cur=seg;
     rowEls.forEach((el,i)=>{el.classList.toggle("active",i===seg);el.classList.toggle("done",i<seg);});
     $("#vtag").textContent=STEPS[seg].tag;
-    $("#cap").innerHTML="<b>["+STEPS[seg].tag+"]</b> "+STEPS[seg].cap;
+    $("#cap").innerHTML="<b>["+esc(STEPS[seg].tag)+"]</b> "+esc(STEPS[seg].cap);
     chipEls.forEach((c,ci)=>c.classList.toggle("on",CHAPTERS[ci][1]===seg));
   }
   function seekToStep(i){ if(!D)return; vid.currentTime=ATS[i]+0.05; setSeg(i); }

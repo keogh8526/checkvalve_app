@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from datetime import datetime, timezone
 
 from .config import OUTPUT, REPO, PART_ID
@@ -82,6 +83,16 @@ def run(stem: str, client=None, ingest: bool = True) -> dict:
 EDITABLE = {"badge", "text", "sub", "pts", "insp", "cap"}   # label channel only (tag/at/standard_time protected)
 PROTECTED = {"at", "no", "tag", "standard_time", "evidence"}
 
+# Per-stem lock — serializes the read-modify-write-render sequences (edit/review/approve)
+# and preview/export renders for one clip. Shared across services/preview/export.
+_STEM_LOCKS = {}
+_STEM_GUARD = threading.Lock()
+
+
+def _stem_lock(stem):
+    with _STEM_GUARD:
+        return _STEM_LOCKS.setdefault(stem, threading.Lock())
+
 
 def _now():
     return datetime.now(timezone.utc).isoformat()
@@ -148,7 +159,11 @@ def edit_step(stem, no, fields):
     tgt.update({k: fields[k] for k in fields})
     tgt["provenance"] = "manual"
     rs = _load_rs(stem)
-    rs[str(no)] = {**rs.get(str(no), {}), "provenance": "manual"}
+    # editing content invalidates the operator's prior sign-off: the edited step must be
+    # re-reviewed and the whole guide re-approved (a signature can't cover changed content).
+    rs[str(no)] = {**rs.get(str(no), {}), "provenance": "manual", "reviewed": False}
+    if b["review"].get("approved") or b["review"].get("signed_off"):
+        b["review"].update(approved=False, signed_off=False, signed_by=None, signed_at=None)
     _atomic_json(_rs_path(stem), rs)
     _require_keys(b)
     _atomic_json(bp, b)

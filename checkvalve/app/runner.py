@@ -80,37 +80,42 @@ class JobStore:
 
 
 JOBS = JobStore()
+_START_GUARD = threading.Lock()   # serialize lock-acquire across threads (closes unlink->reopen TOCTOU)
 
 
 class Runner:
     def start(self, stem, use_llm):
         d = _jdir(stem)
         lock = d / ".lock"
-        try:
-            fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError:
-            sp = d / "status.json"
-            cur = json.loads(sp.read_text(encoding="utf-8")) if sp.is_file() else {}
-            if _pid_alive(cur.get("pid")):
-                raise Busy(cur.get("job_id", f"{stem}.busy"))
-            lock.unlink(missing_ok=True)   # stale lock from a dead child
-            fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        os.close(fd)
-        job = f"{stem}.{int(time.time())}"
-        _atomic(d / "status.json", {"job_id": job, "stem": stem, "pid": None, "seq": 0, "state": "queued",
-                                    "stage": "spawn", "pct": 0, "log_tail": [], "bundle_path": None,
-                                    "guide_url": None, "error": None, "started_at": _now(), "updated_at": _now()})
-        env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
-        args = [str(VENV_PY), "-m", "checkvalve.run_job", "--stem", stem, "--job", job]
-        if use_llm:
-            args.append("--llm")
-        p = subprocess.Popen(args, cwd=str(REPO), env=env,
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         sp = d / "status.json"
-        st = json.loads(sp.read_text(encoding="utf-8"))
-        st.update(pid=p.pid, state="running", seq=st.get("seq", 0) + 1)
-        _atomic(sp, st)
+        # Hold the guard across the WHOLE acquire->spawn->pid-write sequence. If it were
+        # released right after os.close(fd), a second thread could enter, see the lockfile,
+        # read status.json while pid is still None (_pid_alive(None)==False), treat it as
+        # stale, unlink+reopen, and spawn a duplicate child. Popen is fast; single-operator.
+        with _START_GUARD:
+            try:
+                fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except FileExistsError:
+                cur = json.loads(sp.read_text(encoding="utf-8")) if sp.is_file() else {}
+                if _pid_alive(cur.get("pid")):
+                    raise Busy(cur.get("job_id", f"{stem}.busy"))
+                lock.unlink(missing_ok=True)   # stale lock from a dead child
+                fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.close(fd)
+            job = f"{stem}.{int(time.time())}"
+            _atomic(sp, {"job_id": job, "stem": stem, "pid": None, "seq": 0, "state": "queued",
+                         "stage": "spawn", "pct": 0, "log_tail": [], "bundle_path": None,
+                         "guide_url": None, "error": None, "started_at": _now(), "updated_at": _now()})
+            env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+            args = [str(VENV_PY), "-m", "checkvalve.run_job", "--stem", stem, "--job", job]
+            if use_llm:
+                args.append("--llm")
+            p = subprocess.Popen(args, cwd=str(REPO), env=env,
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            st = json.loads(sp.read_text(encoding="utf-8"))
+            st.update(pid=p.pid, state="running", seq=st.get("seq", 0) + 1)
+            _atomic(sp, st)
         threading.Thread(target=self._reap, args=(p, d, lock, job), daemon=True).start()
         return job
 

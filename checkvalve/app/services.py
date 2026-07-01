@@ -47,14 +47,18 @@ def get_bundle(stem):
     return b
 
 
-# thin pass-throughs (the router validates stem ∈ list_stems() before calling)
+# thin pass-throughs (router validates stem ∈ list_stems()) — held under the per-stem lock
+# so concurrent PUT/review/approve for one clip don't lose each other's read-modify-write.
 def edit_step(stem, no, fields):
-    return pipeline.edit_step(stem, no, fields)
+    with pipeline._stem_lock(stem):
+        return pipeline.edit_step(stem, no, fields)
 
 
 def mark_reviewed(stem, no):
-    return pipeline.mark_reviewed(stem, no)
+    with pipeline._stem_lock(stem):
+        return pipeline.mark_reviewed(stem, no)
 
 
 def approve(stem, signed_by):
-    return pipeline.approve(stem, signed_by)
+    with pipeline._stem_lock(stem):
+        return pipeline.approve(stem, signed_by)
