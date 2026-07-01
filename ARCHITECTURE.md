@@ -82,7 +82,8 @@ py3.13 휠 없음. 교차모델 불일치(`disagree_pct`)는 **stub이 아니라
 
 ### 1.1 정본 문서 계약 — `bundle.json`
 
-> **중요(GUI 검증):** frozen 양식이 실제 소비하는 STEPS 필드는 정확히 `{no, tag, at, insp, badge, text, sub, pts, cap}`. `segAt`은 **`at`만** 사용(다음 단계의 `at`이 경계 — `end` 필드 없음). 검수 체크는 항목 수를 동적 카운트.
+> **중요(GUI 검증):** 정본 frozen 양식(sopgen `check_valve.html`)이 소비하는 STEPS 필드는 `{no, tag, at, insp, badge, text, sub, pts, cap}` — `segAt`은 **`at`만** 사용(다음 단계 `at`이 경계). 검수 체크는 항목 수 동적 카운트.
+> **주의(양식 분기):** A(cv_full)의 `render_workinstruction.py`는 **`end` 필드를 쓰는 다른 양식 변형**을 타깃함(segAt이 `STEPS[i].end` 사용). D0.1에서 **at-only 원본으로 통일**(더 단순·검증됨), `spec_compiler`가 at-only STEPS 생성. `end`를 정본 계약에 넣지 않음.
 
 `bundle = { stem, video, shot_type, roles, meta{품명·도번·공정명·관리번호·작업표준시간·개정}, standard_time{method,caveat,value}, STEPS[], CHAPTERS[], SEQ[], SELF[], review{evidence_ok, signed_off, approved, needs_review[], blocked[], warnings[], provenance{...}} }`
 
@@ -239,3 +240,27 @@ GET  /output/<stem>/guide/*  → 정적, Range/206  [is_relative_to(REPO) 가드
 - **단일시점 표준시간은 autocorrelation(n=1)으로 퇴화** — `caveat` 동반, 다시점 실측인 척 안 함.
 - **frozen 양식은 계약.** sha256+앵커 문자열을 스모크가 assert — 양식 편집은 무음 파손 대신 빌드 실패.
 - **재현성은 fixture 커밋 조건부.** `ground_truth.csv` 커밋 불가면 정직-평가 주장을 약화가 아니라 **철회**.
+
+---
+
+## 8. 문서 입력 & 환각 방지 재설계 (v3 — Codex 2패스 반영)
+
+**입력 = PDF만.** `.docx`/HWP 배제(Claude Files API는 PDF·텍스트만; docx는 변환 필요, HWP 불가). 스캔 PDF는 OCR **저신뢰 플래그 + 엄격 검수**, 텍스트 PDF 권장.
+
+**핵심 원칙 전환 — LLM은 "사실 추출자"가 아니다.** 수치·정렬·단계수 같은 load-bearing 사실은 **결정적 코드 + 사람**이 확정하고, **LLM은 의미 조직(semantic structuring)만** 한다. (Codex 두 패스가 v2의 환각 방어를 층별로 뚫음 → 아래로 대체.)
+
+### 스테이지 재정의: `prepare/doc_parse.py` (부품당 1회·오프라인 폴백 유지)
+1. **결정적 파서가 먼저** — 텍스트 PDF=`pdfplumber`(표 셀 bbox/page), 스캔=OCR(저신뢰). LLM 이전에 **원문 사실 + 위치 provenance** 확보. `.docx`는 지원 안 함(PDF만).
+2. **LLM은 의미 조직만** — 파싱된 텍스트/표를 `process_spec`로 구조화(어느 셀이 어느 단계의 어느 필드인지 **연결**). **숫자 전사 금지.** citations는 **안 씀**(구조화출력과 API 비호환 — 400).
+3. **수치·BOM = 원문 regex + 단계/섹션 맥락 바인딩**(전역 문자열매칭 금지). 각 값 `{step_id, field, page, row/col, raw_span, value, unit}`. 단위/전각/공백/범위 정규화 후 대조. LLM은 숫자 공급 안 함.
+4. **셀별 사람 서명 — 렌더된 원문 페이지 대조**(LLM 텍스트 대조 아님). 승인UI가 원문 페이지 + 추출셀 하이라이트. 승인물 = **content-hash + 서명자·시각**(불변).
+5. **오프라인 폴백:** `process_spec` 없고 API 없으면 `canonical.py` **수동입력 경로 유지**(폐기 아님). LLM 문서파싱은 *가속기*, 필수 아님. CI `client=None` 전체 실행.
+
+### 정렬·검증·컴파일 (전부 결정적, LLM 아님)
+6. **정렬 = 결정적 단조, `N≠M`은 하드 블록**(경고 아님 — 필수 단계 무음 드롭 금지). 동시진행(정렬↔핀삽입)은 taxonomy의 **공유세그먼트 규칙(SUPER 그룹)** 으로 명시. LLM은 근거/설명만.
+7. **verifier = 결정적 재추출**(원문 bytes regex), 2차 LLM 아님(상관오류 회피). 2차 LLM은 sanity 힌트로만.
+8. **abstain = 코드 게이트** — 스키마에 `confidence:number` + `abstained:bool` 추가, **코드가** 저신뢰/기권을 검수로 라우팅(프롬프트 의존 아님).
+9. **`spec_compiler`(결정적)** — 검증된 process_spec + fused_segments → bundle(`at·badge·tag·insp`, at-only). LLM 없음.
+10. **`provider` 인터페이스** — process_spec가 `canonical.py` 인터페이스(`CANONICAL_ORDER/parts_for/desc_for/control_for/BADGE/PROC_ORDER`) 구현, importer 3개(assemble_fused·render_workinstruction·anchor_steps) 전환 후 canonical 폐기. `store.py`+`STEP_SCHEMA`에 `source_cite/confidence/grounded/numeric_guard` 컬럼 추가.
+
+**한 줄:** LLM이 어떤 load-bearing 수치·정렬의 **유일 출처가 되지 않게** 아키텍처를 짠다 — 결정적 파서가 사실을, LLM이 의미를, 코드·사람이 검증을.
