@@ -1,0 +1,14 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>작업지도서 스튜디오</title><link rel="stylesheet" href="/static/app.css"></head><body>
+<header class="bar"><div class="brand">작업지도서 <b>스튜디오</b><small id="partTag"></small></div>
+<nav class="steps" id="wizard">
+ <button class="wz" data-screen="ingest">① 수집</button>
+ <button class="wz" data-screen="run">② 실행</button>
+ <button class="wz" data-screen="preview">③ 미리보기</button>
+ <button class="wz" data-screen="review">④ 검수·편집</button>
+ <button class="wz" data-screen="approve">⑤ 승인·내보내기</button>
+</nav><div class="sp"></div><span class="job" id="jobPill" hidden></span></header>
+<main id="app" aria-live="polite"></main>
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="/static/app.js"></script></body></html>

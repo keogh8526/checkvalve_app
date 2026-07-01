@@ -35,3 +35,6 @@ make_ppt.py
 .claude/
 .omc/
 scratch_adv/
+output/
+checkvalve/sop.db
+*.pyc
