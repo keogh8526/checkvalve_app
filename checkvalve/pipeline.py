@@ -1,12 +1,12 @@
 """
 Pipeline orchestrator: one clip -> a draft 표준 작업 지도서, end to end.
 
-  seed gold -> profile -> digest -> (gold-align segments on the timeline clip)
-            -> keyframes -> author(RAG) -> standard-time -> assemble -> render
-            -> ingest the draft into the store.
+  profile -> digest (keypoint-derived motion) -> keyframes
+          -> author (Claude analyzes the preprocessing + process-doc PDF)
+          -> standard-time -> assemble -> render -> ingest the draft (audit).
 
-The author stage is RAG (gold pool) here; pass a Claude client to switch stage E
-to claude-opus-4-8 vision once an API key exists.
+No RAG / gold pool — the Claude API is the analyst. A key is required; see step_author.
+The store is kept only as an audit log of drafts, not a retrieval source.
 """
 from __future__ import annotations
 
@@ -22,38 +22,17 @@ from .clip_profile import write_profile
 from .step_author import author_steps
 from .assembler import assemble
 from .render import render
-from .store import seed_gold, get_gold, get_validated_steps, ingest_document, delete_drafts
+from .store import ingest_document, delete_drafts
 # signal_digest/keyframe_sampler/timing pull cv2/numpy/scipy — imported LAZILY inside run()
 # so the ML-free Studio process can import this module just for the edit/approve helpers.
-
-
-def _gold_aligned_segments(digest, pool):
-    """For the timeline clip, replace the weak uniform windows with the gold step
-    boundaries so keyframes + steps line up 1:1 with the validated guide."""
-    dur = digest["duration_sec"] or (pool[-1]["at"] + 30)
-    ats = [p["at"] for p in pool]
-    segs = []
-    for i, a in enumerate(ats):
-        b = ats[i + 1] if i + 1 < len(ats) else dur
-        segs.append({"id": i, "start_sec": float(a), "end_sec": float(b), "source": "gold"})
-    return segs
 
 
 def run(stem: str, client=None, ingest: bool = True) -> dict:
     from .signal_digest import write_digest   # lazy (ML) — only when actually generating
     from .keyframe_sampler import sample
     from .timing import estimate
-    seed_gold()
     profile = write_profile(stem)
     digest = write_digest(stem)
-
-    gold = get_gold(PART_ID)
-    pool = get_validated_steps(PART_ID)
-    if gold and stem == gold.get("source_clip") and pool:
-        digest["candidate_segments"] = _gold_aligned_segments(digest, pool)
-        (OUTPUT / stem / "digest.json").write_text(
-            json.dumps(digest, ensure_ascii=False, indent=2), encoding="utf-8")
-
     keyframes = sample(stem, digest)
     author_result = author_steps(stem, digest, keyframes, profile, client=client)
     timing = estimate()
@@ -63,13 +42,15 @@ def run(stem: str, client=None, ingest: bool = True) -> dict:
     bundle = assemble(stem, author_result, video_rel, profile, timing)
     (OUTPUT / stem / "steps_bundle.json").write_text(
         json.dumps(bundle, ensure_ascii=False, indent=2), encoding="utf-8")
+    # Fresh authoring invalidates any prior per-step review — clear the review_state so a
+    # regenerated bundle never inherits stale "reviewed"/signed flags on freshly-written steps.
+    _rs_path(stem).unlink(missing_ok=True)
 
     out = render(stem, bundle)
 
     if ingest:
         delete_drafts(PART_ID, stem)   # re-run replaces this clip's draft, not accumulates
-        steps_for_store = [{**s, "provenance": author_result["steps"][i].get("provenance", "rag")}
-                           for i, s in enumerate(bundle["STEPS"])]
+        steps_for_store = [{**s, "provenance": s.get("provenance", "llm")} for s in bundle["STEPS"]]
         ingest_document(PART_ID, stem, "draft", bundle["meta"], steps_for_store,
                         bundle["SEQ"], bundle["SELF"], origin="pipeline")
 
@@ -110,7 +91,12 @@ def _rs_path(stem):
 
 def _load_rs(stem):
     p = _rs_path(stem)
-    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}   # a corrupt review_state must not crash edit/review/approve or the library
 
 
 def _require_keys(b):
@@ -140,7 +126,7 @@ def generate_guide(stem, client=None, on_progress=None):
 
 
 def _reingest_draft(b, rs):
-    prov = {str(s["no"]): (rs.get(str(s["no"]), {}).get("provenance") or s.get("provenance", "rag"))
+    prov = {str(s["no"]): (rs.get(str(s["no"]), {}).get("provenance") or s.get("provenance", "llm"))
             for s in b["STEPS"]}
     steps = [{**s, "provenance": prov[str(s["no"])]} for s in b["STEPS"]]
     store.delete_drafts(PART_ID, b["stem"])
@@ -173,10 +159,14 @@ def edit_step(stem, no, fields):
 
 
 def mark_reviewed(stem, no):
+    b = json.loads((OUTPUT / stem / "steps_bundle.json").read_text(encoding="utf-8"))
+    # trust gate: a step with a real evidence gap (blocked) cannot be signed off — the client
+    # disables its button, but enforce server-side too so a direct API call can't bypass it.
+    if no in (b.get("review", {}).get("blocked") or []):
+        raise ValueError(f"step {no}: 근거 미충족(blocked) — 검수할 수 없습니다")
     rs = _load_rs(stem)
     rs[str(no)] = {**rs.get(str(no), {}), "reviewed": True}
     _atomic_json(_rs_path(stem), rs)
-    b = json.loads((OUTPUT / stem / "steps_bundle.json").read_text(encoding="utf-8"))
     return {"ok": True, "review": _merged_review(b, rs)}
 
 
@@ -189,11 +179,13 @@ def approve(stem, signed_by):
         return False, {"error": "근거 미충족 — 승인 불가", "review": _merged_review(b, rs)}
     if not (b["STEPS"] and all(rs.get(str(s["no"]), {}).get("reviewed") for s in b["STEPS"])):
         return False, {"error": "모든 단계 검수 필요", "review": _merged_review(b, rs)}
+    # Record the signed doc in the DB FIRST. If the DB write fails we must NOT leave an
+    # approved=True guide on disk with no audit record — so promote before persisting.
+    store.promote_to_validated(PART_ID, stem, signed_by)   # audit: marks the validated doc + signer
     r.update(signed_off=True, approved=True, signed_by=signed_by, signed_at=_now())
     _require_keys(b)
     _atomic_json(bp, b)
     render(stem, b)
-    store.promote_to_validated(PART_ID, stem, signed_by)   # closes the RAG feedback loop
     return True, {"ok": True, "approved": True, "review": _merged_review(b, rs)}
 
 

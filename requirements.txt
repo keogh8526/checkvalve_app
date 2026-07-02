@@ -18,3 +18,7 @@ matplotlib>=3.7          # 신호/정렬 시각화
 rtmlib>=0.0.13           # RTMPose-Hand 21점
 onnxruntime>=1.17        # rtmlib 추론 백엔드 (mac: CoreML/CPU)
 #  - Python 3.11 환경이면 mediapipe도 가능: pip install mediapipe>=0.10.18
+
+# 작업지도서 Studio (Claude 분석 기반)
+anthropic>=0.115         # Claude Sonnet 5 vision — 키프레임 분석 (API 키 필요, ~/.checkvalve/settings.json)
+pdfplumber>=0.11         # 공정지침서 PDF 텍스트 추출 (선택 입력의 근거)

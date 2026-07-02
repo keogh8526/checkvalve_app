@@ -1,7 +1,7 @@
 """
 Self-contained export: a zip of the guide (index.html + steps_data.js + clip.mp4 +
-a tiny file:// viewer). Approval-gated. Timeline clip only (the small ~75MB deliverable
-clip, never the 309MB timing clip). Uses guide/clip.mp4 so there is no ../data traversal.
+a tiny file:// viewer). Approval-gated. Works for any generated clip — export bundles
+that clip's own guide/clip.mp4 (a sibling copy, so there is no ../data traversal).
 """
 import json
 import os
@@ -11,9 +11,10 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from ..config import OUTPUT, REPO, is_timeline
+from ..config import OUTPUT, REPO
 from ..paths import list_stems
 from ..render import render
+from . import runner                    # is_generating() job-state guard
 from .preview import _lock
 
 
@@ -24,8 +25,6 @@ class ExportBlocked(Exception):
 def build_export(stem):
     if stem not in list_stems():
         raise ExportBlocked("unknown stem")
-    if not is_timeline(stem):
-        raise ExportBlocked("타임라인 클립만 내보낼 수 있습니다")
     guide = OUTPUT / stem / "guide"
     exdir = OUTPUT / stem / "export"
     zpath = exdir / f"작업지도서_{stem[-9:]}.zip"
@@ -33,6 +32,8 @@ def build_export(stem):
     # the same lock and revokes approval on any content change; checking `approved` outside
     # the lock is a TOCTOU that could ship an approved-then-edited (now-unapproved) guide.
     with _lock(stem):
+        if runner.is_generating(stem):   # a run_job child could be rewriting the guide/bundle now
+            raise ExportBlocked("생성 중 — 완료 후 내보내기")
         b = json.loads((OUTPUT / stem / "steps_bundle.json").read_text(encoding="utf-8"))
         if not b.get("review", {}).get("approved"):
             raise ExportBlocked("not_approved")
@@ -45,8 +46,10 @@ def build_export(stem):
             (root / "index.html").write_text(html, encoding="utf-8")
             shutil.copy2(guide / "steps_data.js", root / "steps_data.js")
             shutil.copy2(guide / "clip.mp4", root / "clip.mp4")
-            if (guide / "review.json").exists():
-                shutil.copy2(guide / "review.json", root / "review.json")
+            # provenance/signature record written straight from the approved bundle `b`
+            # (not a best-effort copy) so the zip ALWAYS carries the approval record.
+            (root / "review.json").write_text(json.dumps(b["review"], ensure_ascii=False, indent=2),
+                                              encoding="utf-8")
             _add_viewer(root)
             fd, tmpname = tempfile.mkstemp(suffix=".zip.tmp", dir=str(exdir))   # unique tmp — no fixed-name race
             os.close(fd)

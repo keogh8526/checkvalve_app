@@ -56,6 +56,8 @@ def main():
         os.environ.setdefault("CHECKVALVE_REPO", repo_root())
         sys.path.insert(0, os.environ["CHECKVALVE_REPO"])
         from checkvalve.app import studio   # ZERO ML import
+        from checkvalve.app.runner import JOBS
+        JOBS.rebuild_on_boot()               # recover interrupted jobs (studio.main does this; keep parity here)
         port = int(os.environ.get("STUDIO_PORT") or _free())
 
         def opener():

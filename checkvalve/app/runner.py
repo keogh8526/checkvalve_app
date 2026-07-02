@@ -3,6 +3,7 @@ Background job runner + on-disk JobStore. The Studio (ML-free) starts a child
 `checkvalve.run_job` via the venv python; state lives in OUTPUT/<stem>/job/status.json.
 Single-flight per stem via an O_EXCL lockfile; boot-rebuild marks interrupted jobs.
 """
+import calendar
 import json
 import os
 import subprocess
@@ -10,6 +11,16 @@ import threading
 import time
 
 from ..config import OUTPUT, REPO, VENV_PY
+
+_MAX_STALE_SEC = 1800   # a live run refreshes updated_at every stage (max gap ~a few min);
+#                         only a wedged job / server-restart-orphan-with-reused-pid exceeds this.
+
+
+def _age_sec(ts):
+    try:
+        return time.time() - calendar.timegm(time.strptime(ts, "%Y-%m-%dT%H:%M:%SZ"))
+    except Exception:
+        return None
 
 
 class Busy(Exception):
@@ -51,6 +62,26 @@ def _pid_alive(pid):
             return True
         except (OSError, ValueError):
             return False
+
+
+def is_generating(stem):
+    """True if a run_job child is actively generating for this stem. Cross-process
+    job-state guard: the trust gates (approve/edit/review/export) refuse while this holds,
+    because generation rewrites steps_bundle.json/review_state.json/guide from another
+    process that the in-process _stem_lock cannot exclude."""
+    p = OUTPUT / stem / "job" / "status.json"
+    if not p.is_file():
+        return False
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    if d.get("state") not in ("queued", "running") or not _pid_alive(d.get("pid")):
+        return False
+    age = _age_sec(d.get("updated_at"))
+    if age is not None and age > _MAX_STALE_SEC:
+        return False   # pid looks alive but status is long-stale (restart + reused pid) — don't hard-block forever
+    return True
 
 
 class JobStore:
@@ -102,7 +133,7 @@ class Runner:
                 lock.unlink(missing_ok=True)   # stale lock from a dead child
                 fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             os.close(fd)
-            job = f"{stem}.{int(time.time())}"
+            job = f"{stem}.{time.time_ns()}"   # ns (single dot preserved for _stem_of): unique even <1s apart
             _atomic(sp, {"job_id": job, "stem": stem, "pid": None, "seq": 0, "state": "queued",
                          "stage": "spawn", "pct": 0, "log_tail": [], "bundle_path": None,
                          "guide_url": None, "error": None, "started_at": _now(), "updated_at": _now()})
@@ -121,12 +152,15 @@ class Runner:
 
     def _reap(self, p, d, lock, job):
         rc = p.wait()
-        lock.unlink(missing_ok=True)
         sp = d / "status.json"
-        st = json.loads(sp.read_text(encoding="utf-8")) if sp.is_file() else {}
-        if st.get("job_id") == job and st.get("state") == "running":   # child died w/o terminal state
-            st.update(state="error", error=f"exit {rc}", seq=st.get("seq", 0) + 1)
-            _atomic(sp, st)
+        with _START_GUARD:   # only clean up if a NEWER job hasn't already taken over this stem's lock
+            st = json.loads(sp.read_text(encoding="utf-8")) if sp.is_file() else {}
+            if st.get("job_id") != job:
+                return                          # superseded — the newer job owns .lock + status
+            lock.unlink(missing_ok=True)
+            if st.get("state") == "running":    # child died w/o writing a terminal state
+                st.update(state="error", error=f"exit {rc}", seq=st.get("seq", 0) + 1)
+                _atomic(sp, st)
 
 
 RUNNER = Runner()

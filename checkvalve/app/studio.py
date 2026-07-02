@@ -12,7 +12,7 @@ import urllib.parse
 
 PART_ID_RE = re.compile(r"[A-Za-z0-9_\-]+")   # /api/doc part_id allow-list (path-safe)
 
-from ..config import OUTPUT, STATIC, TEMPLATE, is_timeline
+from ..config import OUTPUT, STATIC, TEMPLATE, PART_ID
 from ..paths import list_stems
 from ..prepare import doc_stub
 from . import services
@@ -41,6 +41,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b)
 
+    def _err(self):
+        import sys, traceback
+        traceback.print_exc(file=sys.stderr)              # detail to server log only
+        self._json(500, {"error": "internal server error"})   # never leak str(e)/paths to the client
+
     def _json_body(self):
         n = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(n) if n else b""
@@ -63,7 +68,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             try:
                 start = int(s) if s else 0
                 end = min(int(e), size - 1) if e else size - 1
-                do_range = True
+                do_range = start >= 0 and start <= end and start < size   # else serve full body (not a bogus 206)
             except ValueError:
                 do_range = False                     # malformed Range -> serve full body
         with open(fs, "rb") as f:
@@ -122,8 +127,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self._serve_static(path)
             if path == "/api/parts":
                 return self._json(200, services.api_parts())
+            if path == "/api/library":
+                return self._json(200, services.list_instructions())
+            if path == "/api/prep":
+                stem = _stem_of(self._qs("job"))
+                if stem not in list_stems():
+                    return self._json(404, {"error": "unknown job"})
+                return self._json(200, services.prep(stem))
+            if path == "/api/settings":
+                return self._json(200, services.get_settings())
             if path == "/api/status":
-                st = JOBS.read(self._qs("job"))
+                job = self._qs("job")
+                if _stem_of(job) not in list_stems():   # validate before JOBS.read builds a path from it
+                    return self._json(404, {"error": "unknown job"})
+                st = JOBS.read(job)
                 return self._json(200 if st.get("state") != "unknown" else 404, st)
             if path == "/api/bundle":
                 stem = _stem_of(self._qs("job"))
@@ -137,10 +154,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 stem = _stem_of(self._qs("job"))
                 if stem not in list_stems():
                     return self._json(404, {"error": "unknown job"})
-                if not is_timeline(stem):
-                    return self._json(409, {"error": "preview는 타임라인 클립 전용"})
                 try:
-                    services.ensure_rendered(stem)
+                    services.ensure_rendered(stem)   # any generated clip previews its own video
                 except FileNotFoundError:
                     return self._json(404, {"error": "no bundle"})
                 self.send_response(302)
@@ -153,8 +168,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self._json(404, {"error": "not found"})
         except BrokenPipeError:
             pass
-        except Exception as e:
-            self._json(500, {"error": str(e)})
+        except Exception:
+            self._err()
 
     # ── POST ──
     def do_POST(self):
@@ -193,15 +208,29 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 except ExportBlocked as e:
                     return self._json(409, {"error": str(e)})
             if path == "/api/doc":
-                part_id = self._qs("part_id") or "GMT-CV-008"
+                part_id = self._qs("part_id") or PART_ID
                 if not PART_ID_RE.fullmatch(part_id):     # block path traversal via part_id
                     return self._json(400, {"error": "invalid part_id"})
                 return self._json(200, doc_stub.store_doc(part_id, self._raw_body()))
+            if path == "/api/upload":                     # direct video upload -> DATA/<stem>.mp4
+                return self._json(200, services.save_upload(self._qs("name"), self._raw_body()))
+            if path == "/api/save":                        # name a generated instruction (library)
+                b = self._json_body()
+                stem = _stem_of(b.get("job", ""))
+                if stem not in list_stems():
+                    return self._json(404, {"error": "unknown job"})
+                return self._json(200, services.save_instruction(stem, b.get("name") or ""))
+            if path == "/api/settings":                   # {model, api_key} -> ~/.checkvalve
+                b = self._json_body()
+                return self._json(200, services.set_settings(model=b.get("model"),
+                                                             api_key=b.get("api_key")))
             return self._json(404, {"error": "not found"})
+        except Busy as e:
+            self._json(409, {"error": "생성 중 — 완료 후 다시 시도", "job_id": e.job_id})
         except ValueError as e:
             self._json(400, {"error": str(e)})
-        except Exception as e:
-            self._json(500, {"error": str(e)})
+        except Exception:
+            self._err()
 
     # ── PUT ──
     def do_PUT(self):
@@ -214,10 +243,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     return self._json(404, {"error": "unknown job"})
                 return self._json(200, services.edit_step(stem, int(b["no"]), b.get("fields") or {}))
             return self._json(404, {"error": "not found"})
+        except Busy as e:
+            self._json(409, {"error": "생성 중 — 완료 후 다시 시도", "job_id": e.job_id})
         except ValueError as e:
             self._json(400, {"error": str(e)})
-        except Exception as e:
-            self._json(500, {"error": str(e)})
+        except Exception:
+            self._err()
 
 
 def serve(port=8765):

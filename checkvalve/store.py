@@ -56,14 +56,29 @@ def connect() -> sqlite3.Connection:
 
 def promote_to_validated(part_id, source_clip, signed_by):
     """Approve seam: flip this clip's latest draft to validated + record the signer.
-    Validated docs survive delete_drafts, so the RAG pool grows (feedback loop)."""
+    ONE validated doc per clip: supersede (delete) any prior validated version of the
+    SAME clip first, so re-approving replaces rather than stacking. Without this the RAG
+    pool feeds back on itself (each approved guide was built FROM the pool) and grows
+    5->10->20->40 on repeated approvals. Distinct clips still each contribute one doc."""
     con = connect()
     try:
         row = con.execute(
             "SELECT id FROM document WHERE part_id=? AND source_clip=? AND status='draft'"
             " ORDER BY id DESC LIMIT 1", (part_id, source_clip)).fetchone()
         if not row:
+            # Idempotent re-approve: no draft (already promoted) but a validated doc exists
+            # for this clip — just refresh the signer instead of erroring the approve.
+            existing = con.execute(
+                "SELECT id FROM document WHERE part_id=? AND source_clip=? AND status='validated'"
+                " ORDER BY id DESC LIMIT 1", (part_id, source_clip)).fetchone()
+            if existing:
+                con.execute("UPDATE document SET signed_by=?, signed_at=datetime('now') WHERE id=?",
+                            (signed_by, existing["id"]))
+                con.commit()
+                return existing["id"]
             raise ValueError("no draft to promote")
+        con.execute("DELETE FROM document WHERE part_id=? AND source_clip=? AND status='validated'"
+                    " AND id<>?", (part_id, source_clip, row["id"]))
         con.execute("UPDATE document SET status='validated', signed_by=?, signed_at=datetime('now')"
                     " WHERE id=?", (signed_by, row["id"]))
         con.commit()
@@ -95,32 +110,9 @@ def ingest_document(part_id, source_clip, status, meta, steps, seq, self_,
         con.close()
 
 
-def get_validated_steps(part_id=PART_ID) -> list[dict]:
-    """The candidate pool: validated steps for a part, ordered by their `at`."""
-    con = connect()
-    try:
-        rows = con.execute(
-            "SELECT s.* FROM step s JOIN document d ON d.id=s.doc_id"
-            " WHERE d.part_id=? AND d.status='validated' ORDER BY s.at, s.pos", (part_id,)).fetchall()
-    finally:
-        con.close()
-    return [{"tag": r["tag"], "at": r["at"], "insp": r["insp"], "badge": r["badge"],
-             "text": r["text"], "sub": r["sub"], "pts": json.loads(r["pts_json"] or "[]"),
-             "cap": r["cap"]} for r in rows]
-
-
-def get_gold(part_id=PART_ID) -> dict | None:
-    con = connect()
-    try:
-        d = con.execute("SELECT * FROM document WHERE part_id=? AND status='validated'"
-                        " ORDER BY id LIMIT 1", (part_id,)).fetchone()
-    finally:
-        con.close()
-    if not d:
-        return None
-    return {"id": d["id"], "meta": json.loads(d["meta_json"] or "{}"),
-            "seq": json.loads(d["seq_json"] or "[]"), "self": json.loads(d["self_json"] or "[]"),
-            "source_clip": d["source_clip"]}
+# NOTE: get_validated_steps / get_gold / seed_gold were removed with RAG (the API is now the
+# analyst). The store is an audit log only: ingest_document (drafts), delete_drafts,
+# promote_to_validated (approve seam), list_documents.
 
 
 def list_documents() -> list[dict]:
@@ -147,17 +139,3 @@ def delete_drafts(part_id, source_clip) -> None:
         con.close()
 
 
-def seed_gold() -> int | None:
-    """Ingest gold_seed.json as validated document #0 if not already present.
-    Race-safe: the ux_gold partial-unique index rejects a concurrent second
-    insert, which we swallow."""
-    if get_gold():
-        return None
-    gold = json.loads((PKG / "gold_seed.json").read_text(encoding="utf-8"))
-    steps = [{**s, "provenance": "human"} for s in gold["steps"]]
-    try:
-        return ingest_document(gold["part_id"], gold["source_clip"], "validated",
-                               gold["meta"], steps, gold["seq"], gold["self"],
-                               origin="gold", provenance="human")
-    except sqlite3.IntegrityError:
-        return None  # another thread seeded it first
