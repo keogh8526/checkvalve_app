@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>작업지도서 · Dual Plate Check Valve (공정 8)</title>
+<style>
+  :root{
+    --bd:#8b94a3;          /* 표 테두리 */
+    --bd2:#b9c0cb;         /* 옅은 내부선 */
+    --hd:#e9edf3;          /* 헤더 셀 음영 */
+    --hd2:#f3f5f9;
+    --ink:#16202c; --ink2:#3f4a59; --mut:#788294;
+    --navy:#1f3a5f; --accent:#0e7c8b;
+    --hl:#fff6c9;          /* 현재 단계 하이라이트(형광펜) */
+    --hl-bd:#e6c64a;
+    --seq:#6b5ca6; --seqbg:#efebf8;
+    --self:#b4761b; --selfbg:#fbf0db;
+    --ok:#1c8a4e; --okbg:#e7f6ec;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Nirmala UI',sans-serif;
+    color:var(--ink); background:#cdd3db; line-height:1.45; font-size:13px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'SF Mono',Consolas,'D2Coding',monospace}
+
+  /* 상단 도구 막대 (인쇄 시 숨김) */
+  .toolbar{position:sticky;top:0;z-index:20;background:#1b2430;color:#e7ecf2;
+    display:flex;align-items:center;gap:10px;padding:9px 16px;flex-wrap:wrap}
+  .toolbar .t{font-weight:700;font-size:13px;letter-spacing:.3px}
+  .toolbar .t small{color:#93a0b2;font-weight:400;margin-left:8px}
+  .toolbar .sp{flex:1}
+  .toolbar .clk{font-variant-numeric:tabular-nums;background:#0f1620;color:#cfe6ea;
+    padding:6px 11px;border-radius:5px;font-size:12.5px;font-weight:700}
+  .tb{border:0;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700;
+    padding:7px 13px;border-radius:5px;background:#33414f;color:#fff}
+  .tb:hover{background:#3f4f60}
+  .tb.go{background:var(--accent)} .tb.go:hover{background:#0c6c79}
+  .glb{font-size:14px;margin-left:2px;color:#cfe6ea}
+  .tbsel{border:1px solid #3a6f7d;background:#244a55;color:#fff;font:inherit;
+    font-size:12.5px;font-weight:700;padding:7px 9px;border-radius:5px;cursor:pointer}
+  .tbsel:hover{background:#2d5a67}
+  .tbsel option{background:#1b2430;color:#fff}
+
+  /* 용지 */
+  .page{max-width:1160px;margin:18px auto 40px;background:#fff;
+    border:1.5px solid var(--bd);box-shadow:0 6px 22px rgba(20,32,44,.18)}
+
+  table{border-collapse:collapse;width:100%}
+  td,th{border:1px solid var(--bd);padding:6px 9px;vertical-align:middle}
+  .lbl{background:var(--hd);font-weight:700;color:var(--ink2);text-align:center;
+    white-space:nowrap;font-size:12.5px}
+  thead th{background:var(--hd);font-weight:700;color:var(--ink2);font-size:12.5px;
+    text-align:center}
+  .c{text-align:center} .l{text-align:left}
+
+  /* 제목 줄 */
+  .titlebar td{border:1px solid var(--bd)}
+  .doctitle{background:var(--navy);color:#fff;text-align:center;font-size:22px;
+    font-weight:800;letter-spacing:14px;padding:14px 0 14px 14px;width:200px}
+  .appr{width:210px;padding:0}
+  .appr table{height:100%}
+  .appr .ah{background:var(--hd2);font-size:11px;color:var(--mut);font-weight:700;padding:4px}
+  .appr .av{padding:9px 4px;text-align:center;font-size:12.5px}
+  .appr .side{writing-mode:vertical-rl;text-orientation:upright;background:var(--hd);
+    font-weight:700;color:var(--ink2);width:26px;letter-spacing:3px;font-size:12px}
+  .meta-v{font-size:14px;font-weight:700}
+  .meta-v small{display:block;font-weight:400;color:var(--mut);font-size:11.5px;margin-top:1px}
+  .big{font-size:18px;color:var(--navy);font-weight:800}
+
+  /* 본문 작업표 */
+  .work td{vertical-align:top}
+  .work thead th{padding:8px 6px}
+  .figcell{width:372px;background:#fbfcfd;padding:10px;vertical-align:top}
+  .figttl{font-size:11.5px;color:var(--mut);font-weight:700;margin-bottom:7px;text-align:center}
+  .vidwrap{position:relative;border:1px solid var(--bd2);background:#0b1220;
+    aspect-ratio:16/9;overflow:hidden}
+  .vidwrap video{width:100%;height:100%;display:block;background:#0b1220}
+  .vtag{position:absolute;top:7px;left:7px;background:rgba(255,255,255,.94);color:var(--navy);
+    font-weight:800;font-size:12px;padding:3px 8px;border:1px solid var(--bd)}
+  .cap{font-size:12px;color:var(--ink2);margin-top:8px;min-height:46px;
+    border:1px dashed var(--bd2);background:#fff;padding:7px 9px}
+  .cap b{color:var(--navy)}
+  .chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+  .chip{border:1px solid var(--bd);background:#fff;padding:4px 9px;font-size:11.5px;
+    font-weight:700;color:var(--ink2);cursor:pointer}
+  .chip:hover{background:var(--hd)} .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+  .stepno{width:48px;text-align:center;font-weight:800;font-size:15px;color:var(--navy)}
+  .stepno small{display:block;color:var(--mut);font-weight:700;font-size:10.5px;margin-top:2px}
+  .work .desc{width:auto}
+  .desc .d1{font-weight:700;font-size:13.5px;line-height:1.5}
+  .desc .d2{color:var(--mut);font-size:11.5px;margin-top:3px}
+  .ctrl{width:270px}
+  .ctrl ul{margin:0;padding-left:17px} .ctrl li{margin:2px 0;font-size:12.5px}
+  .insp{width:64px;text-align:center}
+  .tagi{display:inline-block;font-size:11px;font-weight:800;padding:3px 7px;border:1px solid}
+  .tagi.s1{color:var(--seq);background:var(--seqbg);border-color:#cdc2ea}
+  .tagi.s2{color:var(--self);background:var(--selfbg);border-color:#ecd6a6}
+  .tagi.s3{color:#0e7c8b;background:#e1f3f5;border-color:#b3dfe3}
+  tr.row{cursor:pointer}
+  tr.row:hover td:not(.figcell){background:#f6f8fb}
+  tr.row.active td:not(.figcell){background:var(--hl)}
+  tr.row.active .stepno{color:#7a5d00}
+  tr.row.done .stepno::after{content:" ✓";color:var(--ok)}
+
+  /* 하단 표들 */
+  .ckcell{padding:7px 9px}
+  .ck{display:inline-flex;align-items:flex-start;gap:7px;cursor:pointer;font-size:12.5px;
+    color:var(--ink2);margin:3px 16px 3px 0;line-height:1.35}
+  .ck input{width:16px;height:16px;accent-color:var(--accent);margin:1px 0 0;cursor:pointer}
+  .grpv{font-weight:800;color:var(--seq);font-size:12px;white-space:nowrap}
+  .grpv.b{color:var(--self)}
+  .passbox{font-weight:800;text-align:center;background:var(--hd2);color:var(--mut)}
+  .passbox.ok{background:var(--okbg);color:var(--ok)}
+  .note{font-size:11.5px;color:#5a6678;line-height:1.6;padding:9px 11px;background:#fafbfc}
+  .note b{color:var(--ink2)}
+
+  /* 영어 표시일 때 레이아웃 보정 */
+  .lang-en .doctitle{letter-spacing:5px;font-size:17px;padding:14px 6px}
+  /* 네팔어(데바나가리) 표시일 때 보정 */
+  .lang-ne .doctitle{letter-spacing:1px;font-size:18px;padding:14px 8px}
+  .lang-ne .desc .d1{line-height:1.55}
+  .lang-ne .ctrl li,.lang-ne .ck{line-height:1.5}
+  /* 공통: 영어·네팔어에서 라벨 줄바꿈 허용 + 결재란 가로쓰기 */
+  .lang-en .lbl,.lang-ne .lbl{white-space:normal}
+  .lang-en .appr .side,.lang-ne .appr .side{writing-mode:horizontal-tb;text-orientation:mixed;
+    width:auto;letter-spacing:1px;white-space:nowrap;padding:6px 5px}
+
+  @media print{
+    body{background:#fff}
+    .toolbar{display:none}
+    .page{margin:0;border:1.5px solid #000;box-shadow:none;max-width:none}
+    td,th,.page{border-color:#000 !important}
+  }
+  @media(max-width:820px){
+    .doctitle{letter-spacing:6px;font-size:18px;width:auto}
+    .work, .work tbody, .work tr, .work td{display:block;width:auto}
+    .work thead{display:none}
+    .figcell{width:auto}
+    .stepno{display:inline-block;border:0}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="t"><span data-i18n="tb_title">작업지도서</span><small data-i18n="tb_sub">Dual Plate Check Valve · 공정 8</small></div>
+  <div class="sp"></div>
+  <div class="clk" id="clk">0:00 / 0:00</div>
+  <button class="tb go" id="btnPlay">▶ 재생</button>
+  <button class="tb" id="btnRestart">↺ 처음</button>
+  <button class="tb" id="btnPrint">🖨 인쇄</button>
+  <button class="tb" id="btnFull">⛶ 전체화면</button>
+  <span class="glb" title="Language / भाषा">🌐</span>
+  <select class="tbsel" id="langSel" aria-label="Language">
+    <option value="ko">한국어</option>
+    <option value="en">English</option>
+    <option value="ne">नेपाली</option>
+  </select>
+</div>
+
+<div class="page" id="page">
+
+  <!-- 제목 + 기본정보 + 결재 -->
+  <table class="titlebar">
+    <tr>
+      <td class="doctitle" rowspan="3" data-i18n="doctitle">작 업<br>지도서</td>
+      <td class="lbl" data-i18n="lbl_prod">품&nbsp;&nbsp;명</td>
+      <td class="meta-v"><span data-i18n="prod_val">체크밸브</span><small data-i18n="prod_sub">Dual Plate Wafer</small></td>
+      <td class="lbl" data-i18n="lbl_dwg">도&nbsp;&nbsp;번</td>
+      <td class="meta-v mono">GMT-CV-008</td>
+      <td class="appr" rowspan="3">
+        <table>
+          <tr><td class="side" rowspan="2" data-i18n="appr_side">결재</td>
+              <td class="ah" data-i18n="appr_h1">작성</td><td class="ah" data-i18n="appr_h2">검토</td><td class="ah" data-i18n="appr_h3">승인</td></tr>
+          <tr><td class="av" data-i18n="appr_v1">팀원</td><td class="av" data-i18n="appr_v2">멘토</td><td class="av" data-i18n="appr_v3">팀장</td></tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td class="lbl" data-i18n="lbl_proc">공정명</td>
+      <td class="meta-v" style="font-size:13px" data-i18n="proc_val">공정 8 · DISC·SPACER·HINGE PIN 조립</td>
+      <td class="lbl" data-i18n="lbl_ctrlno">관리번호</td>
+      <td class="meta-v">8</td>
+    </tr>
+    <tr>
+      <td class="lbl" data-i18n="lbl_stdtime">작업<br>표준시간</td>
+      <td><span class="big" data-i18n="stdtime_big">38~45초</span><small style="color:var(--mut)" data-i18n="stdtime_small"> 측정 중앙값 41초 · 파일럿</small></td>
+      <td class="lbl" data-i18n="lbl_rev">개&nbsp;&nbsp;정</td>
+      <td class="meta-v mono">Rev.0 · ’26.06</td>
+    </tr>
+  </table>
+
+  <!-- 작업 순서/방법 + 그림(영상) -->
+  <table class="work">
+    <thead>
+      <tr>
+        <th class="figcell" data-i18n="th_fig">그림 · 작업 동영상</th>
+        <th style="width:48px" data-i18n="th_step">순서</th>
+        <th data-i18n="th_content">작업 내용 및 방법</th>
+        <th style="width:270px" data-i18n="th_ctrl">중점 관리 항목</th>
+        <th style="width:64px" data-i18n="th_insp">검사</th>
+      </tr>
+    </thead>
+    <tbody id="rows"><!-- JS --></tbody>
+  </table>
+
+  <!-- 사용 치공구 / 안전 -->
+  <table>
+    <tr>
+      <td class="lbl" style="width:104px" data-i18n="lbl_tools">사용 치공구·장비</td>
+      <td class="l" data-i18n="tools_val">1. 조립 지그&nbsp;&nbsp;&nbsp;2. 스프링 거치용 가는 공구(픽 / 육각렌치)&nbsp;&nbsp;&nbsp;3. 클로즈업 캡</td>
+    </tr>
+    <tr>
+      <td class="lbl" data-i18n="lbl_safety">환경 · 안전</td>
+      <td class="l"><span data-i18n="safety_main">장갑 착용 — 손 키포인트는 클로즈업 캡으로 보강</span> <b style="color:var(--self)" data-i18n="safety_warn">(압착 주의)</b></td>
+    </tr>
+  </table>
+
+  <!-- 검사 기준 (체크리스트) -->
+  <table>
+    <tr>
+      <td class="lbl" style="width:104px;height:auto" rowspan="2" data-i18n="lbl_check">검사 기준<br>Check&nbsp;List</td>
+      <td style="width:60px"><span class="grpv" data-i18n="grp_seq">순차<br>검사</span></td>
+      <td class="ckcell" id="seqChecks"></td>
+      <td class="passbox" id="pass" style="width:150px" rowspan="2">검사 미완료<br>0 / 5</td>
+    </tr>
+    <tr>
+      <td><span class="grpv b" data-i18n="grp_self">자주<br>검사</span></td>
+      <td class="ckcell" id="selfChecks"></td>
+    </tr>
+  </table>
+
+  <!-- 개정 이력 -->
+  <table>
+    <thead><tr>
+      <th style="width:56px" data-i18n="rh_rev">Rev</th><th data-i18n="rh_details">개정 내용</th>
+      <th style="width:80px" data-i18n="rh_by">작성</th><th style="width:96px" data-i18n="rh_date">일자</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="c mono">0</td><td class="l" data-i18n="rh_row1">최초 제정 — 업로드 영상(체크밸브 조립) 분석 기반 파일럿</td>
+          <td class="c" data-i18n="rh_team">팀</td><td class="c mono">’26.06</td></tr>
+      <tr><td class="c mut">·</td><td class="l" style="color:var(--mut)" data-i18n="rh_pending">개정 예정</td><td></td><td></td></tr>
+    </tbody>
+  </table>
+
+
+</div>
+
+<script>
+  // ── 다국어 데이터: 번역이 필요한 문자열은 {ko, en, ne} 객체 ──
+  const STEPS = [
+    {no:1, tag:"1-1", at:0,   insp:1,
+     badge:{ko:"정렬", en:"Align", ne:"मिलान"},
+     text:{ko:"두 디스크를 맞댄 상태에서 사이에 토션 스프링·스페이서를 위치시킨다.",
+           en:"With the two discs held together, position the torsion spring and spacer between them.",
+           ne:"दुई डिस्कलाई जोडेर बीचमा टोर्सन स्प्रिङ र स्पेसर राख्नुहोस्।"},
+     sub:{ko:"부품 누락·방향(스프링 형상) 확인 후 바디 보어에 안착",
+          en:"Check for missing parts and orientation (spring shape), then seat into the body bore",
+          ne:"पार्ट छुटेको र दिशा (स्प्रिङको आकार) जाँचेर बडी बोरमा बसाल्नुहोस्"},
+     pts:[{ko:"부품 누락·이종 혼입 없을 것", en:"No missing parts or wrong components", ne:"कुनै पार्ट नछुटोस् वा गलत पार्ट नमिसियोस्"},
+          {ko:"스프링 형상·방향 확인", en:"Verify spring shape and orientation", ne:"स्प्रिङको आकार र दिशा जाँच्नुहोस्"}],
+     cap:{ko:"두 디스크 사이에 토션 스프링·스페이서를 위치 (영상 0:00~)",
+          en:"Position torsion spring and spacer between the two discs (video 0:00~)",
+          ne:"दुई डिस्कको बीचमा टोर्सन स्प्रिङ र स्पेसर राख्ने (भिडियो 0:00~)"}},
+    {no:2, tag:"1-1", at:5,   insp:1,
+     badge:{ko:"걸기", en:"Hook", ne:"अड्काउने"},
+     text:{ko:"가는 공구로 스프링 다리를 양 디스크에 걸고 1자로 정렬한다.",
+           en:"Using a fine tool, hook the spring legs onto both discs and align them straight.",
+           ne:"पातलो औजारले स्प्रिङका खुट्टा दुवै डिस्कमा अड्काएर सीधा मिलाउनुहोस्।"},
+     sub:{ko:"양손 위치·각도 참조 · 스프링·스페이서 일직선 유지",
+          en:"Refer to both-hand position and angle · keep spring and spacer in a straight line",
+          ne:"दुवै हातको स्थिति र कोण हेर्नुहोस् · स्प्रिङ र स्पेसर सीधा रेखामा राख्नुहोस्"},
+     pts:[{ko:"스프링·스페이서 일직선(어긋남 없을 것)", en:"Spring and spacer in line (no misalignment)", ne:"स्प्रिङ र स्पेसर सीधा रेखामा (बेमेल नहोस्)"},
+          {ko:"스프링 다리 양측 균등 거치", en:"Spring legs seated evenly on both sides", ne:"स्प्रिङका खुट्टा दुवैतिर बराबर बसून्"}],
+     cap:{ko:"가는 공구로 스프링 다리를 양 디스크에 거치·정렬 (영상 0:05~)",
+          en:"Seat and align spring legs onto both discs with a fine tool (video 0:05~)",
+          ne:"पातलो औजारले स्प्रिङका खुट्टा दुवै डिस्कमा बसाल्ने र मिलाउने (भिडियो 0:05~)"}},
+    {no:3, tag:"1-1", at:13,  insp:1,
+     badge:{ko:"핀삽입", en:"Pin", ne:"पिन"},
+     text:{ko:"정렬 상태를 유지하며 힌지핀(HINGE PIN)을 끝까지 삽입한다.",
+           en:"Maintaining alignment, insert the hinge pin fully.",
+           ne:"मिलान कायम राख्दै हिन्ज पिन (HINGE PIN) पूरै घुसाउनुहोस्।"},
+     sub:{ko:"핀이 보어를 가로질러 양 디스크 힌지부를 관통 · 끝단 돌출 없이",
+          en:"Pin passes across the bore through both disc hinges · no protruding end",
+          ne:"पिन बोर पार गरेर दुवै डिस्कको हिन्जबाट छिर्छ · टुप्पो ननिस्कियोस्"},
+     pts:[{ko:"핀 끝단 돌출 없을 것", en:"No protruding pin end", ne:"पिनको टुप्पो ननिस्कियोस्"},
+          {ko:"양측 균등 삽입", en:"Inserted evenly on both sides", ne:"दुवैतिर बराबर घुसाउनुहोस्"}],
+     cap:{ko:"힌지핀을 보어를 가로질러 양 디스크에 관통 삽입 (영상 0:13~)",
+          en:"Insert hinge pin across the bore through both discs (video 0:13~)",
+          ne:"हिन्ज पिन बोर पार गरेर दुवै डिस्कमा छिराउने (भिडियो 0:13~)"}},
+    {no:4, tag:"1-2", at:58,  insp:3,
+     badge:{ko:"측정", en:"Measure", ne:"मापन"},
+     text:{ko:"완성된 조립품과 부품(스프링·스페이서)의 치수·외관을 검사한다.",
+           en:"Inspect the dimensions and appearance of the finished assembly and parts (spring, spacer).",
+           ne:"तयार भएको जडान र पार्ट (स्प्रिङ, स्पेसर) को नाप र बाहिरी रूप जाँच्नुहोस्।"},
+     sub:{ko:"버니어 캘리퍼스로 치수 측정 · 스프링 형상/스페이서 상태 확인",
+          en:"Measure dimensions with vernier calipers · check spring shape and spacer condition",
+          ne:"भर्नियर क्यालिपरले नाप लिनुहोस् · स्प्रिङको आकार र स्पेसरको अवस्था जाँच्नुहोस्"},
+     pts:[{ko:"치수 규격 만족(도면 대비)", en:"Dimensions meet spec (vs. drawing)", ne:"नाप स्पेसिफिकेसन अनुसार (ड्रइङसँग मिलोस्)"},
+          {ko:"부품 손상·이물·누락 없을 것", en:"No part damage, contamination, or omission", ne:"पार्टमा क्षति, फोहोर वा छुट नहोस्"}],
+     cap:{ko:"버니어 캘리퍼스 치수 측정 및 스프링·스페이서 부품 확인 (영상 0:58~)",
+          en:"Vernier caliper measurement and spring/spacer part check (video 0:58~)",
+          ne:"भर्नियर क्यालिपरले नाप र स्प्रिङ/स्पेसर पार्ट जाँच (भिडियो 0:58~)"}},
+    {no:5, tag:"1-3", at:128, insp:2,
+     badge:{ko:"검사", en:"Test", ne:"परीक्षण"},
+     text:{ko:"디스크를 눌러 회전·복귀(스프링 리턴)가 원활한지 확인 후 다음 공정으로 보낸다.",
+           en:"Press the disc to confirm smooth rotation and return (spring return), then pass it to the next process.",
+           ne:"डिस्क थिचेर घुम्ने र फर्कने (स्प्रिङ रिटर्न) सहज छ कि छैन जाँचेर अर्को प्रक्रियामा पठाउनुहोस्।"},
+     sub:{ko:"손으로 디스크를 눌렀다 떼며 자동 복귀 확인",
+          en:"Press and release the disc by hand to confirm automatic return",
+          ne:"हातले डिस्क थिचेर छोड्दै स्वतः फर्कने कुरा जाँच्नुहोस्"},
+     pts:[{ko:"디스크 회전·자동 복귀 원활할 것", en:"Smooth disc rotation and automatic return", ne:"डिस्क सहज घुमोस् र स्वतः फर्कोस्"},
+          {ko:"부품 누락 없을 것", en:"No missing parts", ne:"कुनै पार्ट नछुटोस्"}],
+     cap:{ko:"디스크를 눌러 스프링 리턴(자동 복귀)이 원활한지 작동 검사 (영상 2:08~)",
+          en:"Function test: press the disc to check smooth spring return (auto return) (video 2:08~)",
+          ne:"कार्य परीक्षण: डिस्क थिचेर स्प्रिङ रिटर्न (स्वतः फर्कने) सहज छ कि जाँच्ने (भिडियो 2:08~)"}},
+  ];
+  const CHAPTERS=[
+    [{ko:"① 정렬·거치", en:"① Align · seat", ne:"① मिलान · बसाल्ने"},0],
+    [{ko:"② 핀 삽입",   en:"② Pin insert",   ne:"② पिन घुसाउने"},2],
+    [{ko:"③ 측정·검사", en:"③ Measure · inspect", ne:"③ मापन · निरीक्षण"},3],
+    [{ko:"④ 작동검사",  en:"④ Function test", ne:"④ कार्य परीक्षण"},4],
+  ];
+  const SEQ=[
+    {ko:"스프링·스페이서 일직선 (어긋남 없을 것)", en:"Spring and spacer in line (no misalignment)", ne:"स्प्रिङ र स्पेसर सीधा रेखामा (बेमेल नहोस्)"},
+    {ko:"핀 끝단 돌출 없을 것", en:"No protruding pin end", ne:"पिनको टुप्पो ननिस्कियोस्"},
+    {ko:"스프링 다리 양측 균등 거치", en:"Spring legs seated evenly on both sides", ne:"स्प्रिङका खुट्टा दुवैतिर बराबर बसून्"},
+  ];
+  const SELF=[
+    {ko:"핀 삽입 후 디스크 회전·자동 복귀 원활할 것", en:"After pin insertion, smooth disc rotation and auto return", ne:"पिन घुसाएपछि डिस्क सहज घुमोस् र स्वतः फर्कोस्"},
+    {ko:"부품 누락 없을 것 (스프링 형상·방향 확인)", en:"No missing parts (verify spring shape and orientation)", ne:"कुनै पार्ट नछुटोस् (स्प्रिङको आकार र दिशा जाँच्नुहोस्)"},
+  ];
+
+  // 정적 라벨 + 동적 문자열 사전 (data-i18n 키와 일치)
+  const T = {
+    tb_title:{ko:"작업지도서", en:"Work Instruction", ne:"कार्य निर्देशिका"},
+    tb_sub:{ko:"Dual Plate Check Valve · 공정 8", en:"Dual Plate Check Valve · Process 8", ne:"Dual Plate Check Valve · प्रक्रिया 8"},
+    doctitle:{ko:"작 업<br>지도서", en:"WORK<br>INSTRUCTION", ne:"कार्य<br>निर्देशिका"},
+    lbl_prod:{ko:"품&nbsp;&nbsp;명", en:"Product", ne:"वस्तुको नाम"},
+    prod_val:{ko:"체크밸브", en:"Check Valve", ne:"चेक भल्भ"},
+    prod_sub:{ko:"Dual Plate Wafer", en:"Dual Plate Wafer", ne:"Dual Plate Wafer"},
+    lbl_dwg:{ko:"도&nbsp;&nbsp;번", en:"Drawing No.", ne:"ड्रइङ नं."},
+    appr_side:{ko:"결재", en:"Approval", ne:"स्वीकृति"},
+    appr_h1:{ko:"작성", en:"Drafted", ne:"तयार"}, appr_h2:{ko:"검토", en:"Reviewed", ne:"समीक्षा"}, appr_h3:{ko:"승인", en:"Approved", ne:"अनुमोदन"},
+    appr_v1:{ko:"팀원", en:"Member", ne:"सदस्य"}, appr_v2:{ko:"멘토", en:"Mentor", ne:"मेन्टर"}, appr_v3:{ko:"팀장", en:"Lead", ne:"टोली नेता"},
+    lbl_proc:{ko:"공정명", en:"Process", ne:"प्रक्रिया नाम"},
+    proc_val:{ko:"공정 8 · DISC·SPACER·HINGE PIN 조립", en:"Process 8 · DISC·SPACER·HINGE PIN assembly", ne:"प्रक्रिया 8 · DISC·SPACER·HINGE PIN जडान"},
+    lbl_ctrlno:{ko:"관리번호", en:"Control No.", ne:"नियन्त्रण नं."},
+    lbl_stdtime:{ko:"작업<br>표준시간", en:"Standard<br>time", ne:"मानक<br>समय"},
+    stdtime_big:{ko:"38~45초", en:"38–45 s", ne:"38–45 से."},
+    stdtime_small:{ko:" 측정 중앙값 41초 · 파일럿", en:" median 41 s · pilot", ne:" मध्यमान 41 से. · पाइलट"},
+    lbl_rev:{ko:"개&nbsp;&nbsp;정", en:"Revision", ne:"संशोधन"},
+    th_fig:{ko:"그림 · 작업 동영상", en:"Figure · Work Video", ne:"चित्र · कार्य भिडियो"},
+    th_step:{ko:"순서", en:"Step", ne:"चरण"},
+    th_content:{ko:"작업 내용 및 방법", en:"Work Content & Method", ne:"कार्य विवरण र विधि"},
+    th_ctrl:{ko:"중점 관리 항목", en:"Key Control Points", ne:"मुख्य नियन्त्रण बुँदा"},
+    th_insp:{ko:"검사", en:"Insp.", ne:"निरीक्षण"},
+    figttl:{ko:"그림 · 작업 동영상 (영상 실제 장면)", en:"Figure · Work Video (actual scene)", ne:"चित्र · कार्य भिडियो (वास्तविक दृश्य)"},
+    lbl_tools:{ko:"사용 치공구·장비", en:"Tools & Equipment", ne:"औजार र उपकरण"},
+    tools_val:{ko:"1. 조립 지그&nbsp;&nbsp;&nbsp;2. 스프링 거치용 가는 공구(픽 / 육각렌치)&nbsp;&nbsp;&nbsp;3. 클로즈업 캡",
+               en:"1. Assembly jig&nbsp;&nbsp;&nbsp;2. Fine tool for spring seating (pick / hex wrench)&nbsp;&nbsp;&nbsp;3. Close-up cap",
+               ne:"1. जडान जिग&nbsp;&nbsp;&nbsp;2. स्प्रिङ राख्ने पातलो औजार (पिक / हेक्स रेन्च)&nbsp;&nbsp;&nbsp;3. क्लोज-अप क्याप"},
+    lbl_safety:{ko:"환경 · 안전", en:"Environment · Safety", ne:"वातावरण · सुरक्षा"},
+    safety_main:{ko:"장갑 착용 — 손 키포인트는 클로즈업 캡으로 보강",
+                 en:"Wear gloves — hand keypoints supplemented by close-up cap",
+                 ne:"पन्जा लगाउनुहोस् — हातका किपोइन्ट क्लोज-अप क्यापले पूरक गरिन्छ"},
+    safety_warn:{ko:"(압착 주의)", en:"(pinch hazard)", ne:"(थिचिने जोखिम)"},
+    lbl_check:{ko:"검사 기준<br>Check&nbsp;List", en:"Inspection Criteria<br>Check&nbsp;List", ne:"निरीक्षण मापदण्ड<br>Check&nbsp;List"},
+    grp_seq:{ko:"순차<br>검사", en:"Sequential<br>check", ne:"क्रमिक<br>जाँच"},
+    grp_self:{ko:"자주<br>검사", en:"Self<br>check", ne:"स्व<br>जाँच"},
+    rh_rev:{ko:"Rev", en:"Rev", ne:"Rev"},
+    rh_details:{ko:"개정 내용", en:"Revision details", ne:"संशोधन विवरण"},
+    rh_by:{ko:"작성", en:"By", ne:"तयार"},
+    rh_date:{ko:"일자", en:"Date", ne:"मिति"},
+    rh_row1:{ko:"최초 제정 — 업로드 영상(체크밸브 조립) 분석 기반 파일럿",
+             en:"Initial issue — pilot based on analysis of an uploaded video (check valve assembly)",
+             ne:"प्रारम्भिक संस्करण — अपलोड गरिएको भिडियो (चेक भल्भ जडान) विश्लेषणमा आधारित पाइलट"},
+    rh_team:{ko:"팀", en:"Team", ne:"टोली"},
+    rh_pending:{ko:"개정 예정", en:"Revision pending", ne:"संशोधन बाँकी"},
+    // 동적 문자열
+    play_play:{ko:"▶ 재생", en:"▶ Play", ne:"▶ प्ले"},
+    play_pause:{ko:"❚❚ 정지", en:"❚❚ Pause", ne:"❚❚ पज"},
+    btn_restart:{ko:"↺ 처음", en:"↺ Restart", ne:"↺ रिस्टार्ट"},
+    btn_print:{ko:"🖨 인쇄", en:"🖨 Print", ne:"🖨 प्रिन्ट"},
+    btn_full:{ko:"⛶ 전체화면", en:"⛶ Fullscreen", ne:"⛶ फुल स्क्रिन"},
+    pass_ok:{ko:"검사 통과 ✓", en:"Passed ✓", ne:"उत्तीर्ण ✓"},
+    pass_no:{ko:"검사 미완료", en:"Incomplete", ne:"अपूर्ण"},
+    doc_title:{ko:"작업지도서 · Dual Plate Check Valve (공정 8)",
+               en:"Work Instruction · Dual Plate Check Valve (Process 8)",
+               ne:"कार्य निर्देशिका · Dual Plate Check Valve (प्रक्रिया 8)"},
+  };
+  // 검사 구분 태그: 클래스(언어 무관) + 라벨(언어별)
+  const IMAP={1:"s1",2:"s2",3:"s3"};
+  const INSP_LABEL={1:{ko:"순차",en:"Seq.",ne:"क्रमिक"},2:{ko:"자주",en:"Self",ne:"स्व"},3:{ko:"측정",en:"Meas.",ne:"मापन"}};
+
+  let LANG='ko';
+  const L = o => (o && typeof o==="object" && "ko" in o) ? (o[LANG] ?? o.ko) : o;
+  const $=s=>document.querySelector(s);
+
+  // ── 작업표 본문 (구조만 생성, 텍스트는 setLang 에서 채움) ──
+  const rows=$("#rows");
+  STEPS.forEach((st,i)=>{
+    const tr=document.createElement("tr");
+    tr.className="row"; tr.dataset.i=i;
+    let fig="";
+    if(i===0){
+      fig=`<td class="figcell" rowspan="${STEPS.length}">
+        <div class="figttl" data-i18n="figttl"></div>
+        <div class="vidwrap">
+          <video id="vid" controls playsinline preload="metadata" src="KakaoTalk_20260606_171834495.mp4"></video>
+          <div class="vtag" id="vtag">1-1</div>
+        </div>
+        <div class="cap" id="cap"></div>
+        <div class="chips" id="chips"></div>
+      </td>`;
+    }
+    const cls = IMAP[st.insp]||"s1";
+    tr.innerHTML = fig +
+      `<td class="stepno">${st.no}<small class="badge"></small></td>
+       <td class="desc"><div class="d1"></div><div class="d2"></div></td>
+       <td class="ctrl"><ul></ul></td>
+       <td class="insp"><span class="tagi ${cls}"></span></td>`;
+    tr.onclick = e=>{ if(e.target.closest(".vidwrap,.chip"))return; seekToStep(i); };
+    rows.appendChild(tr);
+  });
+  const rowEls=[...document.querySelectorAll("tr.row")];
+  const vid=$("#vid");
+
+  const chBox=$("#chips");
+  CHAPTERS.forEach(([labelObj,idx])=>{
+    const c=document.createElement("span"); c.className="chip"; c.dataset.cidx=idx;
+    c.onclick=()=>seekToStep(idx); chBox.appendChild(c);
+  });
+  const chipEls=[...document.querySelectorAll(".chip")];
+
+  // ── 검사 체크리스트 (구조만 생성, 라벨은 setLang 에서 채움) ──
+  function renderChecks(box,items){
+    items.forEach(t=>{
+      const l=document.createElement("label"); l.className="ck";
+      l.innerHTML=`<input type="checkbox"><span class="cklbl"></span>`;
+      l._item=t;
+      l.querySelector("input").onchange=updatePass;
+      box.appendChild(l);
+    });
+  }
+  renderChecks($("#seqChecks"),SEQ);
+  renderChecks($("#selfChecks"),SELF);
+  const allChecks=[...document.querySelectorAll(".ck input")];
+  function updatePass(){
+    const n=allChecks.filter(c=>c.checked).length, tot=allChecks.length, ok=n===tot;
+    const p=$("#pass"); p.classList.toggle("ok",ok);
+    p.innerHTML = (ok?L(T.pass_ok):L(T.pass_no)) + "<br>" + n+" / "+tot;
+  }
+
+  // ── 영상 ↔ 단계 동기화 (실제 영상 장면 시각 기준) ──
+  const ATS=STEPS.map(s=>s.at);          // 각 단계가 영상에서 시작되는 초
+  let D=0,cur=-1,dispSeg=0;
+  const fmt=t=>{t=Math.max(0,Math.floor(t||0));return Math.floor(t/60)+":"+String(t%60).padStart(2,"0");};
+  function segAt(t){let s=0;for(let i=0;i<ATS.length;i++)if(t>=ATS[i]-0.05)s=i;return s;}
+  function paintCaption(seg){
+    $("#vtag").textContent=STEPS[seg].tag;
+    $("#cap").innerHTML="<b>["+STEPS[seg].tag+"]</b> "+L(STEPS[seg].cap);
+  }
+  function setSeg(seg){
+    if(seg===cur)return; cur=seg; dispSeg=seg;
+    rowEls.forEach((el,i)=>{el.classList.toggle("active",i===seg);el.classList.toggle("done",i<seg);});
+    paintCaption(seg);
+    chipEls.forEach((c,ci)=>c.classList.toggle("on",CHAPTERS[ci][1]===seg));
+  }
+  function seekToStep(i){ if(!D)return; vid.currentTime=ATS[i]+0.05; setSeg(i); }
+
+  vid.addEventListener("loadedmetadata",()=>{D=vid.duration||0;$("#clk").textContent="0:00 / "+fmt(D);setSeg(0);});
+  vid.addEventListener("timeupdate",()=>{const t=vid.currentTime;setSeg(segAt(t));$("#clk").textContent=fmt(t)+" / "+fmt(D);});
+  vid.addEventListener("ended",()=>{rowEls.forEach(el=>{el.classList.add("done");el.classList.remove("active")});cur=-1;});
+  vid.addEventListener("play",()=>$("#btnPlay").textContent=L(T.play_pause));
+  vid.addEventListener("pause",()=>$("#btnPlay").textContent=L(T.play_play));
+
+  $("#btnPlay").onclick=()=>vid.paused?vid.play():vid.pause();
+  $("#btnRestart").onclick=()=>{vid.currentTime=0;rowEls.forEach(e=>e.classList.remove("done"));vid.play();};
+  $("#btnPrint").onclick=()=>window.print();
+  $("#btnFull").onclick=()=>document.fullscreenElement?document.exitFullscreen():$("#page").requestFullscreen();
+  $("#langSel").onchange=e=>setLang(e.target.value);
+  document.addEventListener("keydown",e=>{
+    if(e.code==="Space"&&!/INPUT|BUTTON|SELECT/.test(e.target.tagName)){e.preventDefault();vid.paused?vid.play():vid.pause();}
+  });
+
+  // ── 언어 적용 ──
+  function applyStepsLang(){
+    rowEls.forEach((tr,i)=>{
+      const st=STEPS[i];
+      tr.querySelector(".badge").textContent=L(st.badge);
+      tr.querySelector(".d1").textContent=L(st.text);
+      tr.querySelector(".d2").textContent=L(st.sub);
+      tr.querySelector(".ctrl ul").innerHTML=st.pts.map(p=>`<li>${L(p)}</li>`).join("");
+      tr.querySelector(".insp .tagi").textContent=L(INSP_LABEL[st.insp]);
+    });
+  }
+  function applyChaptersLang(){ chipEls.forEach((c,ci)=>{c.textContent=L(CHAPTERS[ci][0]);}); }
+  function applyChecksLang(){ document.querySelectorAll(".ck").forEach(l=>{l.querySelector(".cklbl").textContent=L(l._item);}); }
+
+  function setLang(lang){
+    LANG=lang;
+    document.documentElement.lang=lang;
+    document.title=L(T.doc_title);
+    document.body.classList.remove("lang-en","lang-ne");
+    if(lang!=="ko") document.body.classList.add("lang-"+lang);
+    document.querySelectorAll("[data-i18n]").forEach(el=>{
+      const k=el.dataset.i18n; if(T[k]!==undefined) el.innerHTML=L(T[k]);
+    });
+    $("#btnRestart").textContent=L(T.btn_restart);
+    $("#btnPrint").textContent=L(T.btn_print);
+    $("#btnFull").textContent=L(T.btn_full);
+    $("#btnPlay").textContent=(vid && !vid.paused)?L(T.play_pause):L(T.play_play);
+    $("#langSel").value=lang;
+    applyStepsLang();
+    applyChaptersLang();
+    applyChecksLang();
+    paintCaption(dispSeg);
+    updatePass();
+  }
+
+  setLang("ko");   // 초기 언어
+</script>
+</body>
+</html>
